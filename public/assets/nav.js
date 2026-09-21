@@ -11,4 +11,25 @@
   header.innerHTML = '<a class="brand" href="/index.html" data-testid="nav-home">Playwright Demo UI</a>' +
     pages.map(([k, l]) => `<a href="/pages/${k}.html" data-testid="nav-${k}">${l}</a>`).join('');
   document.body.prepend(header);
+
+  // Current user + Logout on the right (only when a session exists).
+  fetch('/api/me').then((r) => (r.ok ? r.json() : null)).then((u) => {
+    if (!u) return;
+    const box = document.createElement('span');
+    box.className = 'topbar-user';
+    const who = document.createElement('span');
+    who.setAttribute('data-testid', 'nav-user');
+    who.textContent = `${u.username} (${u.role})`;
+    const out = document.createElement('button');
+    out.className = 'secondary';
+    out.setAttribute('data-testid', 'nav-logout');
+    out.textContent = 'Logout';
+    out.onclick = async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      localStorage.removeItem('authToken'); sessionStorage.clear();
+      location.href = '/login.html';
+    };
+    box.append(who, out);
+    header.append(box);
+  }).catch(() => {});
 })();

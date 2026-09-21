@@ -5,7 +5,10 @@ header.topbar { background:var(--brand); color:#fff; padding:12px 24px; display:
 header.topbar a { color:#fff; text-decoration:none; opacity:.9; font-size:14px; }
 header.topbar a:hover { opacity:1; text-decoration:underline; }
 header.topbar .brand { font-weight:700; font-size:18px; margin-right:16px; }
+header.topbar .topbar-user { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:14px; }
+header.topbar button { padding:4px 10px; }
 main { max-width:960px; margin:24px auto; padding:0 16px; }
+main.login-main { max-width:420px; margin-top:80px; }
 h1 { margin:0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
 section.card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-bottom:16px; }
 section.card h2 { margin:0 0 12px; font-size:17px; }

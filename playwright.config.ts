@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { adminAuthFile } from './tests/support/auth-files';
 
 // Set CHROMIUM_PATH to use a pre-installed browser binary (optional).
 const executablePath = process.env.CHROMIUM_PATH;
@@ -30,7 +31,12 @@ export default defineConfig({
     acceptDownloads: true,
     launchOptions: executablePath ? { executablePath, args: ['--no-sandbox'] } : {},
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    // Logs in once and saves the session to tests/.auth/admin.json
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    // All specs run pre-authenticated; specs that need a logged-out start override storageState.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], storageState: adminAuthFile }, dependencies: ['setup'] },
+  ],
   // Starts the demo app automatically before tests
   webServer: { command: 'npm start', url: 'http://localhost:3000', reuseExistingServer: true, timeout: 30_000 },
 });

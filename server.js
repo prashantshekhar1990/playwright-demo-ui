@@ -11,7 +11,6 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- Data ----------
 const users = Array.from({ length: 53 }, (_, i) => ({
@@ -41,6 +40,20 @@ const parseCookies = (req) =>
     return [k, decodeURIComponent(v.join('='))];
   }));
 const currentUser = (req) => sessions.get(parseCookies(req).sid) || null;
+
+// ---------- Page gate ----------
+// Deny by default: without a session only the login page, assets, APIs and downloads are reachable.
+// Everything else (index, /pages/*, unknown paths) redirects to /login.html?redirect=<original url>.
+const isOpenPath = (p) => p === '/login.html' || p.startsWith('/assets/') || p.startsWith('/api/') || p.startsWith('/download/');
+// Only same-site absolute paths are valid redirect targets (blocks //host, /\host and login loops).
+const safeRedirect = (r) => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') && !r.includes('\\') && !r.startsWith('/login.html') ? r : '/index.html');
+app.use((req, res, next) => {
+  const user = currentUser(req);
+  if (req.path === '/login.html') return user ? res.redirect(safeRedirect(req.query.redirect)) : next();
+  if (user || isOpenPath(req.path)) return next();
+  res.redirect(`/login.html?redirect=${encodeURIComponent(req.originalUrl)}`);
+});
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- Auth ----------
 // Valid: admin/admin123 (role admin), user/user123 (role user). "locked"/anything => 403.
