@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Tab Level</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Tab Level</h1><p class="sub">Dynamic tab in a chain</p>
+<section class="card"><h2 id="level-heading" data-testid="level-heading"></h2>
+<p data-testid="lineage" id="lineage"></p>
+<a class="btn" id="open-next" target="_blank" data-testid="open-next">Open next tab</a>
+<button class="secondary" id="close-tab" data-testid="close-tab">Close this tab</button></section>
+<script>
+const level = +new URLSearchParams(location.search).get('level') || 1;
+const names = ['Parent','Child','Grandchild','Great-grandchild'];
+document.getElementById('level-heading').textContent = `${names[level]} tab (level ${level})`;
+document.getElementById('lineage').textContent = 'Lineage: ' + names.slice(0, level+1).join(' > ');
+document.title = `${names[level]} Tab`;
+const next = document.getElementById('open-next');
+if (level >= 3) next.classList.add('hidden'); else next.href = `/pages/tab-level.html?level=${level+1}`;
+document.getElementById('close-tab').onclick = () => window.close();
+</script>
+</main><script src="/assets/nav.js"></script>

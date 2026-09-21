@@ -1,0 +1,9 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Popup Window</title><link rel="stylesheet" href="/assets/style.css"></head>
+<body style="padding:16px"><h2 data-testid="popup-heading">I am a popup</h2>
+<input type="text" id="popup-input" placeholder="Message" data-testid="popup-input">
+<button id="popup-send" data-testid="popup-send">Send to opener</button>
+<button id="popup-close" class="secondary" data-testid="popup-close">Close</button>
+<script>
+document.getElementById('popup-send').onclick = () => { if (window.opener) window.opener.postMessage({type:'popup-msg', text: document.getElementById('popup-input').value}, '*'); };
+document.getElementById('popup-close').onclick = () => window.close();
+</script></body></html>

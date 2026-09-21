@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Dashboard (Protected)</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Dashboard (Protected)</h1><p class="sub">Redirects to login if there is no session</p>
+<section class="card"><h2 data-testid="dashboard-heading">Secure dashboard</h2>
+<p data-testid="dashboard-user">Loading...</p>
+<p>Token in localStorage: <code data-testid="token-present"></code></p></section>
+<script>
+(async () => {
+  const r = await fetch('/api/me');
+  if (!r.ok) { location.href = '/pages/auth.html?redirect=dashboard'; return; }
+  const u = await r.json();
+  document.querySelector('[data-testid=dashboard-user]').textContent = `Logged in as ${u.username} (${u.role})`;
+  document.querySelector('[data-testid=token-present]').textContent = localStorage.getItem('authToken') ? 'yes' : 'no';
+})();
+</script>
+</main><script src="/assets/nav.js"></script>

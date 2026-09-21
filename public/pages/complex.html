@@ -1,0 +1,76 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Complex Applications</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Complex Applications</h1><p class="sub">Shadow DOM, calendar, autocomplete, virtual list</p>
+<section class="card"><h2>Shadow DOM (open) &amp; nested shadow</h2>
+<user-card data-testid="user-card" name="Ada Lovelace"></user-card></section>
+<section class="card"><h2>Calendar / date picker</h2>
+<input type="text" id="date-input" readonly placeholder="Pick a date" data-testid="date-input">
+<div id="calendar" class="hidden" data-testid="calendar" style="margin-top:8px;display:inline-block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+  <button class="secondary" id="cal-prev" data-testid="cal-prev" aria-label="Previous month">&lt;</button><b id="cal-title" data-testid="cal-title"></b>
+  <button class="secondary" id="cal-next" data-testid="cal-next" aria-label="Next month">&gt;</button></div>
+ <table style="margin-top:6px"><thead><tr><th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th></tr></thead><tbody id="cal-body"></tbody></table></div>
+<div class="result" id="date-result" data-testid="date-result">No date selected</div>
+<p>Native: <input type="date" id="native-date" data-testid="native-date"></p></section>
+<section class="card"><h2>Autocomplete</h2>
+<div style="position:relative;display:inline-block">
+ <input type="text" id="ac-input" placeholder="Type a country (e.g. ind)" autocomplete="off" role="combobox" aria-expanded="false" data-testid="ac-input">
+ <ul id="ac-list" role="listbox" class="hidden" data-testid="ac-list" style="position:absolute;left:0;right:0;background:#fff;border:1px solid var(--line);list-style:none;margin:0;padding:0;z-index:5"></ul></div>
+<div class="result" id="ac-result" data-testid="ac-result">-</div></section>
+<section class="card"><h2>Virtual list (10,000 items, only visible rows are in the DOM)</h2>
+<div id="vlist" data-testid="virtual-list" style="height:240px;overflow:auto;border:1px solid var(--line);border-radius:6px;position:relative" tabindex="0">
+ <div id="vspacer" style="height:400000px;position:relative"></div></div>
+<div class="result" id="vinfo" data-testid="virtual-info">-</div></section>
+<script>
+const $ = id => document.getElementById(id);
+// ---- Shadow DOM ----
+class UserCard extends HTMLElement {
+  connectedCallback() {
+    const root = this.attachShadow({ mode: 'open' });
+    root.innerHTML = `<style>.c{border:1px solid #e5e7eb;padding:12px;border-radius:8px;font-family:sans-serif}</style>
+      <div class="c"><h3 id="sh-name">${this.getAttribute('name')}</h3>
+      <input type="text" id="sh-input" placeholder="Shadow input"> <button id="sh-btn">Greet</button>
+      <p id="sh-out">-</p><inner-badge></inner-badge></div>`;
+    root.getElementById('sh-btn').onclick = () => root.getElementById('sh-out').textContent = 'Hello, ' + (root.getElementById('sh-input').value || 'stranger');
+  }
+}
+class InnerBadge extends HTMLElement {
+  connectedCallback() { this.attachShadow({ mode: 'open' }).innerHTML = '<span id="badge" style="background:#dcfce7;padding:2px 8px;border-radius:12px">Nested shadow badge</span>'; }
+}
+customElements.define('inner-badge', InnerBadge); customElements.define('user-card', UserCard);
+// ---- Calendar ----
+let view = new Date(); view.setDate(1); let picked = null;
+const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function renderCal() {
+  $('cal-title').textContent = `${months[view.getMonth()]} ${view.getFullYear()}`;
+  const first = view.getDay(), days = new Date(view.getFullYear(), view.getMonth()+1, 0).getDate(); let html = '<tr>'; let cell = 0;
+  for (let i = 0; i < first; i++, cell++) html += '<td></td>';
+  for (let d = 1; d <= days; d++, cell++) { if (cell % 7 === 0 && cell) html += '</tr><tr>'; html += `<td><button class="secondary day" data-day="${d}" data-testid="day-${d}">${d}</button></td>`; }
+  $('cal-body').innerHTML = html + '</tr>';
+  document.querySelectorAll('.day').forEach(b => b.onclick = () => { const dt = new Date(view.getFullYear(), view.getMonth(), +b.dataset.day);
+    const s = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    $('date-input').value = s; $('date-result').textContent = 'Selected date: ' + s; $('calendar').classList.add('hidden'); });
+}
+$('date-input').onclick = () => { $('calendar').classList.toggle('hidden'); renderCal(); };
+$('cal-prev').onclick = () => { view.setMonth(view.getMonth()-1); renderCal(); }; $('cal-next').onclick = () => { view.setMonth(view.getMonth()+1); renderCal(); };
+// ---- Autocomplete ----
+let acT, acIdx = -1;
+function pick(v) { $('ac-input').value = v; $('ac-list').classList.add('hidden'); $('ac-result').textContent = 'Chosen: ' + v; }
+$('ac-input').addEventListener('input', e => { clearTimeout(acT); const q = e.target.value; if (!q) { $('ac-list').classList.add('hidden'); return; }
+  acT = setTimeout(async () => { const list = await (await fetch('/api/countries?q=' + encodeURIComponent(q))).json(); acIdx = -1;
+    $('ac-list').innerHTML = list.slice(0,8).map(c => `<li role="option" style="padding:6px 10px;cursor:pointer" data-testid="ac-option">${c}</li>`).join('');
+    $('ac-list').classList.toggle('hidden', !list.length); $('ac-input').setAttribute('aria-expanded', !!list.length);
+    $('ac-list').querySelectorAll('li').forEach(li => li.onclick = () => pick(li.textContent)); }, 250); });
+$('ac-input').addEventListener('keydown', e => { const items = [...$('ac-list').querySelectorAll('li')]; if (!items.length) return;
+  if (e.key === 'ArrowDown') acIdx = Math.min(items.length-1, acIdx+1); else if (e.key === 'ArrowUp') acIdx = Math.max(0, acIdx-1);
+  else if (e.key === 'Enter' && acIdx >= 0) { pick(items[acIdx].textContent); return; } else return;
+  items.forEach((li,i) => { li.style.background = i === acIdx ? '#eef2ff' : ''; li.setAttribute('aria-selected', i === acIdx); }); });
+// ---- Virtual list ----
+const ROW = 40, TOTAL = 10000, v = $('vlist'), spacer = $('vspacer'); spacer.style.height = ROW * TOTAL + 'px';
+function renderV() { const start = Math.floor(v.scrollTop / ROW), end = Math.min(TOTAL, start + Math.ceil(v.clientHeight / ROW) + 2);
+  spacer.innerHTML = ''; for (let i = start; i < end; i++) { const r = document.createElement('div'); r.textContent = `Item ${i+1}`; r.dataset.testid = 'virtual-row'; r.dataset.index = i+1;
+    r.style.cssText = `position:absolute;top:${i*ROW}px;height:${ROW}px;left:0;right:0;padding:10px;border-bottom:1px solid #eee`; spacer.appendChild(r); }
+  $('vinfo').textContent = `Rendered rows: ${end - start} of ${TOTAL} (first visible: Item ${start+1})`; }
+v.addEventListener('scroll', renderV); renderV();
+</script>
+</main><script src="/assets/nav.js"></script>

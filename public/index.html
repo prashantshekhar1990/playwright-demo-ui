@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Playwright Demo UI</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main>
+  <h1 data-testid="home-title">Playwright Demo UI</h1>
+  <p class="sub">A practice app covering 15 UI automation scenarios. Login: admin / admin123, user / user123.</p>
+  <div class="grid" id="tiles"></div>
+</main>
+<script src="/assets/nav.js"></script>
+<script>
+const items = [
+ ['basic','Basic elements','Input, button, checkbox, radio, dropdown'],
+ ['links','Links','Same tab, new tab, new window'],
+ ['tabs','Multiple tabs','Parent → child → grandchild'],
+ ['frames','Frames','Single, nested, multiple iframes'],
+ ['popups','Windows / popups','Popup window, alert, confirm, prompt'],
+ ['dynamic','Dynamic elements','Appear, disappear, add, remove'],
+ ['waits','Waits','Auto-wait, conditions, network'],
+ ['tables','Tables','Static, dynamic, pagination, sorting'],
+ ['dropdowns','Dropdowns','Native, custom, searchable'],
+ ['mouse','Mouse','Hover, drag/drop, right/double click'],
+ ['keyboard','Keyboard','Enter, Tab, Escape, shortcuts'],
+ ['files','Upload / download','Single, multiple, download'],
+ ['auth','Authentication','Login, session, storage state'],
+ ['network','Network','Mocking, interception, validation'],
+ ['complex','Complex apps','Shadow DOM, calendar, autocomplete, virtual list'],
+];
+document.getElementById('tiles').innerHTML = items.map(([k,t,d],i)=>
+ `<a class="tile" href="/pages/${k}.html" data-testid="tile-${k}"><span class="n">#${i+1}</span> <b>${t}</b><p>${d}</p></a>`).join('');
+</script></body></html>

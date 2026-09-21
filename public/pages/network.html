@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Network</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Network</h1><p class="sub">API mocking, interception, response validation</p>
+<section class="card"><h2>Products (GET /api/products)</h2>
+<button id="load-products" data-testid="load-products">Load products</button>
+<div id="products-state" data-testid="products-state" class="result">Idle</div>
+<ul id="products" data-testid="products-list"></ul></section>
+<section class="card"><h2>POST /api/echo</h2>
+<input type="text" id="echo-input" placeholder="Message" data-testid="echo-input">
+<button id="echo-btn" data-testid="echo-btn">Send</button>
+<div class="result" id="echo-result" data-testid="echo-result">-</div></section>
+<section class="card"><h2>Flaky endpoint (fails twice, then succeeds)</h2>
+<button id="flaky-btn" data-testid="flaky-btn">Call flaky API</button>
+<button id="flaky-reset" class="secondary" data-testid="flaky-reset">Reset counter</button>
+<div class="result" id="flaky-result" data-testid="flaky-result">-</div></section>
+<section class="card"><h2>Request headers / abort</h2>
+<button id="header-btn" data-testid="header-btn">Call with custom header</button>
+<button id="abort-btn" class="secondary" data-testid="analytics-btn">Send analytics ping (POST /api/analytics)</button>
+<div class="result" id="misc-result" data-testid="misc-result">-</div></section>
+<script>
+const $ = id => document.getElementById(id);
+$('load-products').onclick = async () => {
+  $('products-state').textContent = 'Loading...'; $('products').innerHTML = '';
+  try { const r = await fetch('/api/products'); if (!r.ok) throw new Error('HTTP ' + r.status); const list = await r.json();
+    $('products').innerHTML = list.length ? list.map(p => `<li data-testid="product-item">${p.name} - $${Number(p.price).toFixed(2)}</li>`).join('') : '';
+    $('products-state').textContent = list.length ? `Loaded ${list.length} products` : 'No products found';
+  } catch (e) { $('products-state').textContent = 'Error: ' + e.message; }
+};
+$('echo-btn').onclick = async () => { const r = await fetch('/api/echo', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: $('echo-input').value }) });
+  $('echo-result').textContent = JSON.stringify(await r.json()); };
+$('flaky-btn').onclick = async () => { const r = await fetch('/api/flaky'); const j = await r.json(); $('flaky-result').textContent = r.ok ? 'OK: ' + j.message : 'Failed: ' + j.error; };
+$('flaky-reset').onclick = async () => { await fetch('/api/flaky/reset', { method:'POST' }); $('flaky-result').textContent = 'Counter reset'; };
+$('header-btn').onclick = async () => { const r = await fetch('/api/echo', { method:'POST', headers:{'Content-Type':'application/json','X-Demo-Header':'playwright'}, body:'{}' }); $('misc-result').textContent = 'Header call status: ' + r.status; };
+$('abort-btn').onclick = async () => { try { const r = await fetch('/api/analytics', { method:'POST' }); $('misc-result').textContent = 'Analytics status: ' + r.status; } catch (e) { $('misc-result').textContent = 'Analytics blocked: ' + e.message; } };
+</script>
+</main><script src="/assets/nav.js"></script>

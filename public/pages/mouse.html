@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Mouse Actions</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Mouse Actions</h1><p class="sub">Hover, drag/drop, right-click, double-click</p>
+<style>
+.hover-box { display:inline-block; padding:20px 30px; background:#e0e7ff; border-radius:8px; position:relative; }
+.tooltip { display:none; position:absolute; top:100%; left:0; background:#111827; color:#fff; padding:6px 10px; border-radius:6px; white-space:nowrap; margin-top:6px; }
+.hover-box:hover .tooltip { display:block; }
+.drop-zone { display:inline-block; width:160px; height:120px; border:2px dashed #94a3b8; border-radius:8px; vertical-align:top; margin:0 8px; padding:6px; }
+.drop-zone.over { background:#eef2ff; border-color:var(--brand); }
+.drag-item { background:var(--brand); color:#fff; padding:8px; border-radius:6px; cursor:grab; margin:4px 0; }
+#ctx-menu { position:fixed; background:#fff; border:1px solid var(--line); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:70; list-style:none; margin:0; padding:4px 0; }
+#ctx-menu li { padding:8px 16px; cursor:pointer; } #ctx-menu li:hover { background:#eef2ff; }
+</style>
+<section class="card"><h2>Hover</h2>
+<div class="hover-box" data-testid="hover-box" id="hover-box">Hover over me<span class="tooltip" data-testid="tooltip" role="tooltip">Tooltip text!</span></div></section>
+<section class="card"><h2>Drag and drop (HTML5)</h2>
+<div class="drop-zone" id="zone-a" data-testid="zone-a"><div class="drag-item" draggable="true" id="drag-1" data-testid="drag-item">Drag me</div></div>
+<div class="drop-zone" id="zone-b" data-testid="zone-b"></div>
+<div class="result" id="drag-result" data-testid="drag-result">Item is in Zone A</div></section>
+<section class="card"><h2>Right click</h2>
+<div id="ctx-area" data-testid="context-area" style="padding:30px;background:#fef3c7;border-radius:8px">Right-click here</div>
+<ul id="ctx-menu" class="hidden" data-testid="context-menu"><li data-action="Copy" data-testid="ctx-copy">Copy</li><li data-action="Paste" data-testid="ctx-paste">Paste</li><li data-action="Delete" data-testid="ctx-delete">Delete</li></ul>
+<div class="result" id="ctx-result" data-testid="context-result">-</div></section>
+<section class="card"><h2>Double click / click counters</h2>
+<button id="dbl" data-testid="double-click-btn">Double-click me</button> <span id="dbl-result" data-testid="double-click-result">Not double-clicked</span><br><br>
+<button id="single" class="secondary" data-testid="click-counter">Click me</button> Clicks: <span id="click-count" data-testid="click-count">0</span></section>
+<section class="card"><h2>Mouse position</h2>
+<div id="pad" data-testid="mouse-pad" style="height:100px;background:#dcfce7;border-radius:8px;padding:8px">Move mouse here</div>
+<div class="result" id="pos" data-testid="mouse-pos">x: -, y: -</div></section>
+<script>
+const $ = id => document.getElementById(id);
+// drag & drop
+$('drag-1').addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', 'drag-1'));
+['zone-a','zone-b'].forEach(id => { const z = $(id);
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); z.appendChild($('drag-1')); $('drag-result').textContent = 'Item is in ' + (id === 'zone-a' ? 'Zone A' : 'Zone B'); }); });
+// context menu
+$('ctx-area').addEventListener('contextmenu', e => { e.preventDefault(); const m = $('ctx-menu'); m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px'; m.classList.remove('hidden'); });
+$('ctx-menu').querySelectorAll('li').forEach(li => li.onclick = () => { $('ctx-result').textContent = 'Action: ' + li.dataset.action; $('ctx-menu').classList.add('hidden'); });
+document.addEventListener('click', () => $('ctx-menu').classList.add('hidden'));
+$('dbl').ondblclick = () => $('dbl-result').textContent = 'Double-clicked!';
+let c = 0; $('single').onclick = () => $('click-count').textContent = ++c;
+$('pad').onmousemove = e => { const r = $('pad').getBoundingClientRect(); $('pos').textContent = `x: ${Math.round(e.clientX - r.left)}, y: ${Math.round(e.clientY - r.top)}`; };
+</script>
+</main><script src="/assets/nav.js"></script>

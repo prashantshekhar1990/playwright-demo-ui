@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Keyboard Actions</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Keyboard Actions</h1><p class="sub">Enter, Tab, Escape, shortcuts</p>
+<section class="card"><h2>Key logger</h2>
+<input type="text" id="key-input" placeholder="Press any key here" data-testid="key-input">
+<div class="result" id="key-result" data-testid="key-result">No key pressed</div></section>
+<section class="card"><h2>Enter to submit</h2>
+<input type="text" id="enter-input" placeholder="Type and press Enter" data-testid="enter-input">
+<div class="result" id="enter-result" data-testid="enter-result">-</div></section>
+<section class="card"><h2>Tab order</h2>
+<input type="text" id="tab1" placeholder="Field 1" data-testid="tab-1"><input type="text" id="tab2" placeholder="Field 2" data-testid="tab-2"><input type="text" id="tab3" placeholder="Field 3" data-testid="tab-3">
+<div class="result" id="focus-result" data-testid="focus-result">Focused: none</div></section>
+<section class="card"><h2>Escape closes modal / Shortcuts</h2>
+<button id="open-esc" data-testid="open-esc-modal">Open modal (Esc to close)</button>
+<p>Shortcuts: <kbd>Ctrl+K</kbd> opens command palette, <kbd>Ctrl+S</kbd> saves, <kbd>Shift+A</kbd> shows message</p>
+<div class="result" id="shortcut-result" data-testid="shortcut-result">No shortcut used</div></section>
+<div id="esc-modal" class="modal-backdrop hidden" data-testid="esc-modal" role="dialog"><div class="modal"><h3>Press Escape</h3><p>This modal closes with the Escape key.</p></div></div>
+<div id="palette" class="modal-backdrop hidden" data-testid="palette" role="dialog"><div class="modal"><input type="text" id="palette-input" placeholder="Type a command" data-testid="palette-input"></div></div>
+<script>
+const $ = id => document.getElementById(id);
+$('key-input').addEventListener('keydown', e => $('key-result').textContent = `key: ${e.key} | code: ${e.code} | ctrl:${e.ctrlKey} shift:${e.shiftKey} alt:${e.altKey}`);
+$('enter-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('enter-result').textContent = 'Submitted: ' + e.target.value; });
+['tab1','tab2','tab3'].forEach(id => $(id).addEventListener('focus', () => $('focus-result').textContent = 'Focused: ' + id));
+$('open-esc').onclick = () => $('esc-modal').classList.remove('hidden');
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { $('esc-modal').classList.add('hidden'); $('palette').classList.add('hidden'); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('palette').classList.remove('hidden'); $('palette-input').focus(); $('shortcut-result').textContent = 'Command palette opened'; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $('shortcut-result').textContent = 'Saved via Ctrl+S'; }
+  if (e.shiftKey && e.key === 'A' && document.activeElement.tagName !== 'INPUT') $('shortcut-result').textContent = 'Shift+A pressed';
+});
+</script>
+</main><script src="/assets/nav.js"></script>

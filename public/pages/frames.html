@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Frames</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Frames</h1><p class="sub">Single iframe, nested iframe, multiple frames</p>
+<section class="card"><h2>Single iframe</h2>
+<iframe id="single-frame" name="singleFrame" title="Single Frame" src="/pages/frame-content.html?name=Single" width="100%" height="180" data-testid="single-frame"></iframe></section>
+<section class="card"><h2>Nested iframe (outer → inner)</h2>
+<iframe id="outer-frame" title="Outer Frame" src="/pages/frame-outer.html" width="100%" height="320" data-testid="outer-frame"></iframe></section>
+<section class="card"><h2>Multiple frames</h2>
+<iframe id="frame-a" title="Frame A" src="/pages/frame-content.html?name=A" width="48%" height="180"></iframe>
+<iframe id="frame-b" title="Frame B" src="/pages/frame-content.html?name=B" width="48%" height="180"></iframe></section>
+<section class="card"><h2>srcdoc frame</h2>
+<iframe id="srcdoc-frame" title="Srcdoc Frame" width="100%" height="100" srcdoc="<p id='srcdoc-text'>Inline srcdoc content</p><button id='srcdoc-btn' onclick=&quot;this.textContent='Clicked!'&quot;>Click me</button>"></iframe></section>
+</main><script src="/assets/nav.js"></script>

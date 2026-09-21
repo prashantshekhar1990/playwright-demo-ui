@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Upload & Download</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Upload & Download</h1><p class="sub">Single/multiple file upload, download validation</p>
+<section class="card"><h2>Single file upload</h2>
+<input type="file" id="single-file" data-testid="single-file"> <button id="upload-single" data-testid="upload-single">Upload</button>
+<div class="result" id="single-result" data-testid="single-result">No file uploaded</div></section>
+<section class="card"><h2>Multiple file upload</h2>
+<input type="file" id="multi-file" multiple data-testid="multi-file"> <button id="upload-multi" data-testid="upload-multi">Upload all</button>
+<ul id="file-list" data-testid="file-list"></ul>
+<div class="result" id="multi-result" data-testid="multi-result">No files uploaded</div></section>
+<section class="card"><h2>Downloads</h2>
+<a class="btn" href="/download/sample.txt" download data-testid="download-txt">Download sample.txt</a>
+<a class="btn" href="/download/users.csv" download data-testid="download-csv">Download users.csv</a>
+<button id="dl-blob" data-testid="download-blob">Download generated file (Blob)</button></section>
+<script>
+const $ = id => document.getElementById(id);
+async function send(input, out) {
+  const files = input.files; if (!files.length) { out.textContent = 'Please choose a file'; return; }
+  const fd = new FormData(); [...files].forEach(f => fd.append('files', f));
+  const r = await fetch('/api/upload', { method: 'POST', body: fd }); const j = await r.json();
+  if (!r.ok) { out.textContent = 'Error: ' + j.error; return; }
+  out.textContent = `Uploaded ${j.count} file(s): ` + j.files.map(f => `${f.name} (${f.size} bytes)`).join(', ');
+}
+$('upload-single').onclick = () => send($('single-file'), $('single-result'));
+$('upload-multi').onclick = () => send($('multi-file'), $('multi-result'));
+$('multi-file').onchange = e => $('file-list').innerHTML = [...e.target.files].map(f => `<li data-testid="selected-file">${f.name}</li>`).join('');
+$('dl-blob').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['generated,content\n1,2\n'], { type: 'text/csv' })); a.download = 'generated.csv'; a.click(); };
+</script>
+</main><script src="/assets/nav.js"></script>

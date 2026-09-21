@@ -1,0 +1,4 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Outer Frame</title><link rel="stylesheet" href="/assets/style.css"></head>
+<body style="padding:12px"><h3 data-testid="outer-heading">Outer frame</h3>
+<button id="outer-btn" data-testid="outer-btn" onclick="document.getElementById('outer-msg').textContent='Outer clicked'">Outer button</button> <span id="outer-msg" data-testid="outer-msg"></span>
+<iframe id="inner-frame" title="Inner Frame" src="/pages/frame-content.html?name=Inner" width="100%" height="190" style="margin-top:8px"></iframe></body></html>

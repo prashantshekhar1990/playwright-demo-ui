@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Authentication</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Authentication</h1><p class="sub">Login, session, storage state. Valid: admin/admin123, user/user123, locked/any => 403</p>
+<section class="card" id="login-card"><h2>Login</h2>
+<form id="login-form" data-testid="login-form">
+ <div><label for="username">Username</label><input type="text" id="username" name="username" data-testid="username"></div>
+ <div><label for="password">Password</label><input type="password" id="password" name="password" data-testid="password"></div>
+ <label><input type="checkbox" id="remember" data-testid="remember-me"> Remember me (localStorage)</label><br>
+ <button type="submit" data-testid="login-btn">Login</button></form>
+<div class="result err hidden" id="login-error" data-testid="login-error" role="alert"></div></section>
+<section class="card hidden" id="welcome-card"><h2 data-testid="welcome">Welcome</h2>
+<p>Role: <span id="role" data-testid="role"></span></p>
+<a class="btn" href="/pages/dashboard.html" data-testid="go-dashboard">Go to protected dashboard</a>
+<button id="fetch-secure" class="secondary" data-testid="fetch-secure">Fetch secure data</button>
+<button id="logout" class="danger" data-testid="logout-btn">Logout</button>
+<div class="result" id="secure-result" data-testid="secure-result"></div></section>
+<script>
+const $ = id => document.getElementById(id);
+function show(user) { $('login-card').classList.toggle('hidden', !!user); $('welcome-card').classList.toggle('hidden', !user);
+  if (user) { document.querySelector('[data-testid=welcome]').textContent = `Welcome, ${user.username}`; $('role').textContent = user.role; } }
+async function check() { const r = await fetch('/api/me'); show(r.ok ? await r.json() : null); }
+$('login-form').onsubmit = async e => {
+  e.preventDefault(); $('login-error').classList.add('hidden');
+  const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username:$('username').value, password:$('password').value }) });
+  const j = await r.json();
+  if (!r.ok) { $('login-error').textContent = j.error; $('login-error').classList.remove('hidden'); return; }
+  localStorage.setItem('authToken', j.token); if ($('remember').checked) localStorage.setItem('rememberedUser', j.username); else localStorage.removeItem('rememberedUser');
+  sessionStorage.setItem('loginTime', new Date().toISOString());
+  show(j);
+};
+$('logout').onclick = async () => { await fetch('/api/logout', { method:'POST' }); localStorage.removeItem('authToken'); sessionStorage.clear(); show(null); };
+$('fetch-secure').onclick = async () => { const r = await fetch('/api/secure-data'); $('secure-result').textContent = r.ok ? (await r.json()).secret : 'Unauthorized (' + r.status + ')'; };
+if (localStorage.getItem('rememberedUser')) $('username').value = localStorage.getItem('rememberedUser');
+check();
+</script>
+</main><script src="/assets/nav.js"></script>

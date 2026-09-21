@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Dynamic Elements</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Dynamic Elements</h1><p class="sub">Elements appearing and disappearing</p>
+<section class="card"><h2>Add / remove</h2>
+<button id="add-el" data-testid="add-element">Add element</button>
+<div id="added-list" data-testid="added-list"></div></section>
+<section class="card"><h2>Appear after delay (2s)</h2>
+<button id="show-delayed" data-testid="show-delayed">Show delayed element</button>
+<div id="delayed-el" class="result hidden" data-testid="delayed-element">I appeared!</div></section>
+<section class="card"><h2>Disappear after delay (2s)</h2>
+<button id="hide-delayed" data-testid="start-disappear">Start countdown</button>
+<div id="vanish-el" class="result" data-testid="vanishing-element">I will vanish</div></section>
+<section class="card"><h2>Toggle visibility</h2>
+<button id="toggle-vis" data-testid="toggle-visibility">Toggle</button>
+<p id="toggle-target" data-testid="toggle-target">Now you see me</p>
+<button id="toggle-display" class="secondary" data-testid="toggle-display">Toggle display:none vs visibility:hidden</button>
+<p id="toggle-target2" data-testid="toggle-target2">Second target</p></section>
+<section class="card"><h2>Enable after delay</h2>
+<button id="enable-btn-start" data-testid="enable-start">Start</button>
+<button id="delayed-enable" disabled data-testid="delayed-enabled-btn">Initially disabled</button></section>
+<section class="card"><h2>Random ID element (changing attributes)</h2>
+<button id="randomize" data-testid="randomize">Regenerate</button>
+<div id="random-holder"></div></section>
+<script>
+const $ = id => document.getElementById(id); let n = 0;
+$('add-el').onclick = () => { n++; const d = document.createElement('div'); d.className='result'; d.dataset.testid='added-item'; d.innerHTML = `<span>Element ${n}</span> <button class="danger">Remove</button>`;
+  d.querySelector('button').onclick = () => d.remove(); $('added-list').appendChild(d); };
+$('show-delayed').onclick = () => setTimeout(() => $('delayed-el').classList.remove('hidden'), 2000);
+$('hide-delayed').onclick = () => setTimeout(() => $('vanish-el').remove(), 2000);
+$('toggle-vis').onclick = () => $('toggle-target').classList.toggle('hidden');
+let vh = false; $('toggle-display').onclick = () => { vh = !vh; $('toggle-target2').style.visibility = vh ? 'hidden' : 'visible'; };
+$('enable-btn-start').onclick = () => setTimeout(() => { const b=$('delayed-enable'); b.disabled=false; b.textContent='Now enabled'; }, 2000);
+$('randomize').onclick = () => { $('random-holder').innerHTML = `<button id="rand-${Math.random().toString(36).slice(2,8)}" data-testid="random-btn" class="secondary">Dynamic ID button</button>`; };
+</script>
+</main><script src="/assets/nav.js"></script>

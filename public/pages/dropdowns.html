@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Dropdowns</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Dropdowns</h1><p class="sub">Native select, custom dropdown, searchable dropdown</p>
+<style>
+.dd { position:relative; display:inline-block; min-width:220px; }
+.dd-toggle { width:100%; text-align:left; background:#fff; color:var(--ink); border:1px solid #cbd5e1; }
+.dd-menu { position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--line); border-radius:6px; max-height:200px; overflow:auto; z-index:10; margin:2px 0 0; padding:0; list-style:none; box-shadow:0 4px 12px rgba(0,0,0,.1); }
+.dd-menu li { padding:8px 10px; cursor:pointer; } .dd-menu li:hover, .dd-menu li.active { background:#eef2ff; }
+</style>
+<section class="card"><h2>Native select (single)</h2>
+<select id="fruit" data-testid="native-single"><option value="">Choose fruit</option><option value="apple">Apple</option><option value="banana">Banana</option><option value="cherry">Cherry</option></select>
+<div class="result" id="native-result" data-testid="native-result">-</div></section>
+<section class="card"><h2>Native select (multiple)</h2>
+<select id="multi" multiple size="4" data-testid="native-multi"><option value="red">Red</option><option value="green">Green</option><option value="blue">Blue</option><option value="yellow">Yellow</option></select>
+<div class="result" id="multi-result" data-testid="multi-result">-</div></section>
+<section class="card"><h2>Custom dropdown (div/ul based)</h2>
+<div class="dd" id="custom-dd" data-testid="custom-dropdown">
+ <button class="dd-toggle" id="custom-toggle" aria-haspopup="listbox" aria-expanded="false" data-testid="custom-toggle">Select framework</button>
+ <ul class="dd-menu hidden" role="listbox" id="custom-menu" data-testid="custom-menu">
+  <li role="option" data-value="playwright">Playwright</li><li role="option" data-value="cypress">Cypress</li><li role="option" data-value="selenium">Selenium</li><li role="option" data-value="puppeteer">Puppeteer</li></ul></div>
+<div class="result" id="custom-result" data-testid="custom-result">-</div></section>
+<section class="card"><h2>Searchable dropdown (server-filtered countries)</h2>
+<div class="dd" id="search-dd" data-testid="searchable-dropdown">
+ <button class="dd-toggle" id="search-toggle" data-testid="searchable-toggle">Select country</button>
+ <div id="search-panel" class="dd-menu hidden" style="padding:6px">
+  <input type="text" id="search-input" placeholder="Search country" style="width:100%;min-width:0" data-testid="searchable-input">
+  <ul id="search-list" role="listbox" style="list-style:none;padding:0;margin:6px 0 0" data-testid="searchable-list"></ul></div></div>
+<div class="result" id="search-result" data-testid="searchable-result">-</div></section>
+<script>
+const $ = id => document.getElementById(id);
+$('fruit').onchange = e => $('native-result').textContent = 'Selected: ' + e.target.value;
+$('multi').onchange = e => $('multi-result').textContent = 'Selected: ' + [...e.target.selectedOptions].map(o => o.value).join(', ');
+// custom
+$('custom-toggle').onclick = () => { const m = $('custom-menu'); m.classList.toggle('hidden'); $('custom-toggle').setAttribute('aria-expanded', !m.classList.contains('hidden')); };
+$('custom-menu').querySelectorAll('li').forEach(li => li.onclick = () => { $('custom-toggle').textContent = li.textContent; $('custom-menu').classList.add('hidden'); $('custom-result').textContent = 'Selected: ' + li.dataset.value; });
+// searchable
+async function loadCountries(q='') {
+  const list = await (await fetch('/api/countries?q=' + encodeURIComponent(q))).json();
+  $('search-list').innerHTML = list.length ? list.map(c => `<li role="option" style="padding:6px;cursor:pointer" data-testid="country-option">${c}</li>`).join('') : '<li data-testid="no-country" style="padding:6px">No matches</li>';
+  $('search-list').querySelectorAll('[role=option]').forEach(li => li.onclick = () => { $('search-toggle').textContent = li.textContent; $('search-panel').classList.add('hidden'); $('search-result').textContent = 'Selected: ' + li.textContent; });
+}
+$('search-toggle').onclick = () => { $('search-panel').classList.toggle('hidden'); if (!$('search-panel').classList.contains('hidden')) { loadCountries($('search-input').value); $('search-input').focus(); } };
+let t; $('search-input').oninput = e => { clearTimeout(t); t = setTimeout(() => loadCountries(e.target.value), 250); };
+</script>
+</main><script src="/assets/nav.js"></script>

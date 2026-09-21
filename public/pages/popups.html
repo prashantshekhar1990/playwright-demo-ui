@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Windows & Popups</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Windows & Popups</h1><p class="sub">New page, popup, browser dialogs</p>
+<section class="card"><h2>Popup window</h2>
+<button id="open-popup" data-testid="open-popup">Open popup</button>
+<div class="result" id="popup-result" data-testid="popup-result">No message from popup</div></section>
+<section class="card"><h2>Browser dialogs</h2>
+<button id="btn-alert" data-testid="btn-alert">Alert</button>
+<button id="btn-confirm" data-testid="btn-confirm">Confirm</button>
+<button id="btn-prompt" data-testid="btn-prompt">Prompt</button>
+<button id="btn-beforeunload" data-testid="btn-beforeunload" class="secondary">Enable beforeunload dialog</button>
+<div class="result" id="dialog-result" data-testid="dialog-result">No dialog yet</div></section>
+<section class="card"><h2>In-page modal (not a browser dialog)</h2>
+<button id="open-modal" data-testid="open-modal">Open modal</button></section>
+<div id="modal" class="modal-backdrop hidden" data-testid="modal" role="dialog" aria-modal="true" aria-label="Sample modal">
+ <div class="modal"><h3>Sample modal</h3><p>Modal body text</p><button id="close-modal" data-testid="close-modal">Close</button></div></div>
+<script>
+const $ = id => document.getElementById(id);
+$('open-popup').onclick = () => window.open('/pages/popup-child.html','popup','width=420,height=320');
+window.addEventListener('message', e => { if (e.data && e.data.type==='popup-msg') $('popup-result').textContent = 'Popup says: ' + e.data.text; });
+$('btn-alert').onclick = () => { alert('Hello Alert'); $('dialog-result').textContent = 'Alert dismissed'; };
+$('btn-confirm').onclick = () => { $('dialog-result').textContent = confirm('Are you sure?') ? 'Confirmed: OK' : 'Confirmed: Cancel'; };
+$('btn-prompt').onclick = () => { const v = prompt('Enter your name', 'Guest'); $('dialog-result').textContent = v === null ? 'Prompt cancelled' : 'Prompt value: ' + v; };
+$('btn-beforeunload').onclick = () => { window.onbeforeunload = e => { e.preventDefault(); e.returnValue=''; }; $('dialog-result').textContent = 'beforeunload enabled - try navigating away'; };
+$('open-modal').onclick = () => $('modal').classList.remove('hidden');
+$('close-modal').onclick = () => $('modal').classList.add('hidden');
+</script>
+</main><script src="/assets/nav.js"></script>

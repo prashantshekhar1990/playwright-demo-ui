@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Waits</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Waits</h1><p class="sub">Auto-wait, explicit conditions, network waits</p>
+<section class="card"><h2>Delayed click target (button appears in 3s)</h2>
+<button id="start-appear" data-testid="start-appear">Start</button>
+<div id="appear-holder"></div></section>
+<section class="card"><h2>Loading spinner then content (3s)</h2>
+<button id="load-content" data-testid="load-content">Load content</button>
+<div id="spinner" class="hidden" data-testid="spinner"><span class="spinner"></span> Loading...</div>
+<div id="loaded" class="result hidden" data-testid="loaded-content">Content loaded successfully</div></section>
+<section class="card"><h2>Text change after 2s</h2>
+<button id="change-text" data-testid="change-text">Change status</button>
+<p>Status: <span id="status" data-testid="status">Idle</span></p></section>
+<section class="card"><h2>Network wait (GET /api/slow?delay=3000)</h2>
+<button id="slow-call" data-testid="slow-call">Call slow API</button>
+<div class="result" id="slow-result" data-testid="slow-result">No response yet</div></section>
+<section class="card"><h2>Progress bar to 100%</h2>
+<button id="start-progress" data-testid="start-progress">Start progress</button>
+<progress id="progress" value="0" max="100" data-testid="progress"></progress> <span id="pct" data-testid="progress-pct">0%</span></section>
+<script>
+const $ = id => document.getElementById(id);
+$('start-appear').onclick = () => setTimeout(() => { $('appear-holder').innerHTML = '<button id="late-btn" data-testid="late-button" onclick="this.textContent=\'Clicked late button\'">Late button</button>'; }, 3000);
+$('load-content').onclick = () => { $('spinner').classList.remove('hidden'); $('loaded').classList.add('hidden');
+  setTimeout(() => { $('spinner').classList.add('hidden'); $('loaded').classList.remove('hidden'); }, 3000); };
+$('change-text').onclick = () => { $('status').textContent = 'Processing...'; setTimeout(() => $('status').textContent = 'Done', 2000); };
+$('slow-call').onclick = async () => { $('slow-result').textContent = 'Loading...'; const r = await fetch('/api/slow?delay=3000'); const j = await r.json(); $('slow-result').textContent = j.message; };
+$('start-progress').onclick = () => { let v = 0; const t = setInterval(() => { v += 10; $('progress').value = v; $('pct').textContent = v + '%'; if (v >= 100) clearInterval(t); }, 300); };
+</script>
+</main><script src="/assets/nav.js"></script>

@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Tables</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Tables</h1><p class="sub">Static, dynamic, pagination, sorting</p>
+<section class="card"><h2>Static table</h2>
+<table id="static-table" data-testid="static-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead><tbody>
+<tr><td>Laptop</td><td>Electronics</td><td>999.99</td><td>12</td><td><button class="secondary">Buy</button></td></tr>
+<tr><td>Desk</td><td>Furniture</td><td>250.00</td><td>0</td><td><button class="secondary" disabled>Buy</button></td></tr>
+<tr><td>Pen</td><td>Stationery</td><td>1.50</td><td>500</td><td><button class="secondary">Buy</button></td></tr>
+<tr><td>Chair</td><td>Furniture</td><td>120.00</td><td>7</td><td><button class="secondary">Buy</button></td></tr></tbody></table></section>
+<section class="card"><h2>Dynamic table (server-side pagination, sorting, search)</h2>
+<input type="text" id="search" placeholder="Search users" data-testid="table-search">
+<select id="page-size" data-testid="page-size"><option>5</option><option selected>10</option><option>20</option></select>
+<span id="tbl-loading" class="hidden" data-testid="table-loading"><span class="spinner"></span></span>
+<table id="users-table" data-testid="users-table"><thead><tr>
+ <th class="sortable" data-sort="id" data-testid="th-id">ID</th><th class="sortable" data-sort="name" data-testid="th-name">Name</th>
+ <th class="sortable" data-sort="email" data-testid="th-email">Email</th><th class="sortable" data-sort="role" data-testid="th-role">Role</th>
+ <th class="sortable" data-sort="age" data-testid="th-age">Age</th></tr></thead><tbody id="users-body"></tbody></table>
+<div style="margin-top:10px">
+ <button id="prev" class="secondary" data-testid="prev-page">Previous</button>
+ <span id="page-info" data-testid="page-info"></span>
+ <button id="next" class="secondary" data-testid="next-page">Next</button>
+ <span id="total" data-testid="total-count"></span></div></section>
+<script>
+const $ = id => document.getElementById(id);
+let reqSeq = 0;
+const st = { page:1, size:10, sort:'id', dir:'asc', q:'', total:0 };
+async function load() {
+  const seq = ++reqSeq; // ignore stale responses (out-of-order)
+  $('tbl-loading').classList.remove('hidden');
+  const qs = new URLSearchParams({ page:st.page, size:st.size, sort:st.sort, dir:st.dir, q:st.q });
+  const r = await fetch('/api/users?' + qs); const j = await r.json(); if (seq !== reqSeq) return; st.total = j.total;
+  $('users-body').innerHTML = j.rows.length ? j.rows.map(u => `<tr data-testid="user-row"><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${u.role}</td><td>${u.age}</td></tr>`).join('')
+    : '<tr><td colspan="5" data-testid="no-rows">No results</td></tr>';
+  const pages = Math.max(1, Math.ceil(j.total / st.size));
+  $('page-info').textContent = `Page ${st.page} of ${pages}`; $('total').textContent = `${j.total} users`;
+  $('prev').disabled = st.page <= 1; $('next').disabled = st.page >= pages;
+  document.querySelectorAll('th.sortable').forEach(th => { th.setAttribute('aria-sort', th.dataset.sort === st.sort ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none'); });
+  $('tbl-loading').classList.add('hidden');
+}
+document.querySelectorAll('th.sortable').forEach(th => th.onclick = () => { const s = th.dataset.sort; st.dir = st.sort === s && st.dir === 'asc' ? 'desc' : 'asc'; st.sort = s; st.page = 1; load(); });
+$('prev').onclick = () => { st.page--; load(); }; $('next').onclick = () => { st.page++; load(); };
+$('page-size').onchange = e => { st.size = +e.target.value; st.page = 1; load(); };
+let t; $('search').oninput = e => { clearTimeout(t); t = setTimeout(() => { st.q = e.target.value; st.page = 1; load(); }, 300); };
+load();
+</script>
+</main><script src="/assets/nav.js"></script>

@@ -1,0 +1,10 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Frame Content</title><link rel="stylesheet" href="/assets/style.css"></head>
+<body style="padding:12px"><h3 id="frame-heading" data-testid="frame-heading"></h3>
+<input type="text" id="frame-input" placeholder="Type inside frame" data-testid="frame-input">
+<button id="frame-btn" data-testid="frame-btn">Submit</button>
+<div class="result" id="frame-result" data-testid="frame-result"></div>
+<script>
+const n = new URLSearchParams(location.search).get('name') || 'Frame';
+document.getElementById('frame-heading').textContent = `Content of frame ${n}`;
+document.getElementById('frame-btn').onclick = () => document.getElementById('frame-result').textContent = `[${n}] You typed: ` + document.getElementById('frame-input').value;
+</script></body></html>

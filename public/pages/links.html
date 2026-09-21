@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Links</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Links</h1><p class="sub">Same tab, new tab, new window</p>
+<section class="card"><h2>Link types</h2>
+<p><a href="/pages/basic.html" id="same-tab" data-testid="link-same-tab">Open in same tab</a></p>
+<p><a href="/pages/basic.html" target="_blank" id="new-tab" data-testid="link-new-tab">Open in new tab (target=_blank)</a></p>
+<p><a href="/pages/basic.html" target="_blank" rel="noopener noreferrer" data-testid="link-new-tab-noopener">New tab with noopener</a></p>
+<p><button id="new-window" data-testid="btn-new-window">Open new window (window.open with size)</button></p>
+<p><a href="#section-anchor" data-testid="link-anchor">Jump to anchor</a> | <a href="/nonexistent-page" data-testid="link-broken">Broken link (404)</a> | <a href="mailto:test@example.com" data-testid="link-mailto">Mailto</a></p>
+<div style="height:600px"></div><h3 id="section-anchor" data-testid="anchor-target">Anchor target</h3></section>
+<script>document.getElementById('new-window').onclick = () => window.open('/pages/basic.html','demoWin','width=600,height=500');</script>
+</main><script src="/assets/nav.js"></script>
