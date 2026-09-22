@@ -1,15 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { userAuthFile } from './support/auth-files';
+import { LoginPage } from './pages/LoginPage';
 
 const loggedOut = { cookies: [], origins: [] };
-
-async function login(page: Page, username: string, password: string) {
-  await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Login' }).click();
-}
 
 // By default every test starts logged in as admin (session saved by auth.setup.ts).
 // These tests opt out and start with an empty browser.
@@ -17,28 +12,29 @@ test.describe('logged out', () => {
   test.use({ storageState: loggedOut });
 
   test('invalid and locked login show errors', async ({ page }) => {
-    await page.goto('/login.html');
-    await login(page, 'admin', 'wrong');
-    // getByRole('alert') only matches while the error is actually shown, so this also proves it is visible.
-    await expect(page.getByRole('alert')).toHaveText('Invalid credentials');
-    await page.getByLabel('Username').fill('locked');
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page.getByRole('alert')).toHaveText('Account locked');
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login('admin', 'wrong');
+    await expect(loginPage.error).toHaveText('Invalid credentials');
+    await loginPage.username.fill('locked');
+    await loginPage.loginButton.click();
+    await expect(loginPage.error).toHaveText('Account locked');
     await expect(page).toHaveURL(/\/login\.html/);
   });
 
   test('every page redirects to login when unauthenticated', async ({ page }) => {
+    const loginPage = new LoginPage(page);
     for (const p of ['/', '/index.html', '/pages/basic.html', '/pages/dashboard.html']) {
       await page.goto(p);
       await expect(page, `visiting ${p}`).toHaveURL(new RegExp(`/login\\.html\\?redirect=${encodeURIComponent(p).replace(/\./g, '\\.')}$`));
-      await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
+      await expect(loginPage.loginButton).toBeVisible();
     }
   });
 
   test('login lands on home, session survives reload, logout ends it', async ({ page }) => {
-    await page.goto('/login.html');
-    await login(page, 'admin', 'admin123');
-    await expect(page).toHaveURL(/\/index\.html$/);
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWaitForHome('admin', 'admin123');
     await expect(page.getByTestId('nav-user')).toHaveText('admin (admin)');
     expect(await page.evaluate(() => localStorage.getItem('authToken'))).toBeTruthy();
     await page.reload(); // session cookie persists
@@ -52,24 +48,26 @@ test.describe('logged out', () => {
   });
 
   test('deep link: login returns you to the page you asked for', async ({ page }) => {
+    const loginPage = new LoginPage(page);
     await page.goto('/pages/dashboard.html');
     await expect(page).toHaveURL(/\/login\.html\?redirect=%2Fpages%2Fdashboard\.html$/);
-    await login(page, 'user', 'user123');
+    await loginPage.login('user', 'user123');
     await expect(page).toHaveURL(/\/pages\/dashboard\.html$/);
     await expect(page.getByTestId('dashboard-user')).toHaveText('Logged in as user (user)');
   });
 
   test('redirect parameter cannot send you to another site', async ({ page }) => {
-    await page.goto('/login.html?redirect=%2F%2Fevil.example');
-    await login(page, 'admin', 'admin123');
+    const loginPage = new LoginPage(page);
+    await loginPage.goto('//evil.example');
+    await loginPage.loginAndWaitForHome('admin', 'admin123');
     await expect(page).toHaveURL(/localhost:\d+\/index\.html$/);
   });
 
   test('save storage state and reuse it (second role)', async ({ page, browser }) => {
     fs.mkdirSync(path.dirname(userAuthFile), { recursive: true });
-    await page.goto('/login.html');
-    await login(page, 'user', 'user123');
-    await expect(page).toHaveURL(/\/index\.html$/);
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWaitForHome('user', 'user123');
     await page.context().storageState({ path: userAuthFile });
 
     const ctx = await browser.newContext({ storageState: userAuthFile });
@@ -115,9 +113,10 @@ test.describe('logged in (saved session)', () => {
   });
 
   test('login page bounces an authenticated user away', async ({ page }) => {
-    await page.goto('/login.html');
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
     await expect(page).toHaveURL(/\/index\.html$/);
-    await page.goto('/login.html?redirect=%2Fpages%2Ftables.html');
+    await loginPage.goto('/pages/tables.html');
     await expect(page).toHaveURL(/\/pages\/tables\.html$/);
   });
 });
