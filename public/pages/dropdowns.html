@@ -8,15 +8,15 @@
 .dd-menu li { padding:8px 10px; cursor:pointer; } .dd-menu li:hover, .dd-menu li.active { background:#eef2ff; }
 </style>
 <section class="card"><h2>Native select (single)</h2>
-<select id="fruit" data-testid="native-single"><option value="">Choose fruit</option><option value="apple">Apple</option><option value="banana">Banana</option><option value="cherry">Cherry</option></select>
+<select id="fruit" aria-label="Fruit" data-testid="native-single"><option value="">Choose fruit</option><option value="apple">Apple</option><option value="banana">Banana</option><option value="cherry">Cherry</option></select>
 <div class="result" id="native-result" data-testid="native-result">-</div></section>
 <section class="card"><h2>Native select (multiple)</h2>
-<select id="multi" multiple size="4" data-testid="native-multi"><option value="red">Red</option><option value="green">Green</option><option value="blue">Blue</option><option value="yellow">Yellow</option></select>
+<select id="multi" multiple size="4" aria-label="Colors" data-testid="native-multi"><option value="red">Red</option><option value="green">Green</option><option value="blue">Blue</option><option value="yellow">Yellow</option></select>
 <div class="result" id="multi-result" data-testid="multi-result">-</div></section>
 <section class="card"><h2>Custom dropdown (div/ul based)</h2>
 <div class="dd" id="custom-dd" data-testid="custom-dropdown">
  <button class="dd-toggle" id="custom-toggle" aria-haspopup="listbox" aria-expanded="false" data-testid="custom-toggle">Select framework</button>
- <ul class="dd-menu hidden" role="listbox" id="custom-menu" data-testid="custom-menu">
+ <ul class="dd-menu hidden" role="listbox" aria-label="Frameworks" id="custom-menu" data-testid="custom-menu">
   <li role="option" data-value="playwright">Playwright</li><li role="option" data-value="cypress">Cypress</li><li role="option" data-value="selenium">Selenium</li><li role="option" data-value="puppeteer">Puppeteer</li></ul></div>
 <div class="result" id="custom-result" data-testid="custom-result">-</div></section>
 <section class="card"><h2>Searchable dropdown (server-filtered countries)</h2>
@@ -24,7 +24,7 @@
  <button class="dd-toggle" id="search-toggle" data-testid="searchable-toggle">Select country</button>
  <div id="search-panel" class="dd-menu hidden" style="padding:6px">
   <input type="text" id="search-input" placeholder="Search country" style="width:100%;min-width:0" data-testid="searchable-input">
-  <ul id="search-list" role="listbox" style="list-style:none;padding:0;margin:6px 0 0" data-testid="searchable-list"></ul></div></div>
+  <ul id="search-list" role="listbox" aria-label="Countries" style="list-style:none;padding:0;margin:6px 0 0" data-testid="searchable-list"></ul></div></div>
 <div class="result" id="search-result" data-testid="searchable-result">-</div></section>
 <script>
 const $ = id => document.getElementById(id);

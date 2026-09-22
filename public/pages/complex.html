@@ -11,11 +11,11 @@
   <button class="secondary" id="cal-next" data-testid="cal-next" aria-label="Next month">&gt;</button></div>
  <table style="margin-top:6px"><thead><tr><th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th></tr></thead><tbody id="cal-body"></tbody></table></div>
 <div class="result" id="date-result" data-testid="date-result">No date selected</div>
-<p>Native: <input type="date" id="native-date" data-testid="native-date"></p></section>
+<p>Native: <input type="date" id="native-date" aria-label="Native date" data-testid="native-date"></p></section>
 <section class="card"><h2>Autocomplete</h2>
 <div style="position:relative;display:inline-block">
- <input type="text" id="ac-input" placeholder="Type a country (e.g. ind)" autocomplete="off" role="combobox" aria-expanded="false" data-testid="ac-input">
- <ul id="ac-list" role="listbox" class="hidden" data-testid="ac-list" style="position:absolute;left:0;right:0;background:#fff;border:1px solid var(--line);list-style:none;margin:0;padding:0;z-index:5"></ul></div>
+ <input type="text" id="ac-input" placeholder="Type a country (e.g. ind)" autocomplete="off" role="combobox" aria-label="Country" aria-expanded="false" data-testid="ac-input">
+ <ul id="ac-list" role="listbox" aria-label="Country suggestions" class="hidden" data-testid="ac-list" style="position:absolute;left:0;right:0;background:#fff;border:1px solid var(--line);list-style:none;margin:0;padding:0;z-index:5"></ul></div>
 <div class="result" id="ac-result" data-testid="ac-result">-</div></section>
 <section class="card"><h2>Virtual list (10,000 items, only visible rows are in the DOM)</h2>
 <div id="vlist" data-testid="virtual-list" style="height:240px;overflow:auto;border:1px solid var(--line);border-radius:6px;position:relative" tabindex="0">

@@ -12,32 +12,35 @@ test('static table content', async ({ page }) => {
 test('dynamic table: pagination', async ({ page }) => {
   await page.goto('/pages/tables.html');
   const rows = page.getByTestId('user-row');
+  const next = page.getByRole('button', { name: 'Next', exact: true });
   await expect(rows).toHaveCount(10);
   await expect(page.getByTestId('page-info')).toHaveText('Page 1 of 6');
-  await expect(page.getByTestId('prev-page')).toBeDisabled();
-  for (let i = 0; i < 5; i++) await page.getByTestId('next-page').click();
+  await expect(page.getByRole('button', { name: 'Previous' })).toBeDisabled();
+  for (let i = 0; i < 5; i++) await next.click();
   await expect(page.getByTestId('page-info')).toHaveText('Page 6 of 6');
   await expect(rows).toHaveCount(3);
-  await expect(page.getByTestId('next-page')).toBeDisabled();
+  await expect(next).toBeDisabled();
 });
 
 test('dynamic table: sorting', async ({ page }) => {
   await page.goto('/pages/tables.html');
-  await page.getByTestId('th-age').click();
-  await expect(page.getByTestId('th-age')).toHaveAttribute('aria-sort', 'ascending');
+  const ageHeader = page.getByRole('columnheader', { name: 'Age', exact: true });
+  await ageHeader.click();
+  await expect(ageHeader).toHaveAttribute('aria-sort', 'ascending');
   const ages = (await page.locator('[data-testid=user-row] td:nth-child(5)').allTextContents()).map(Number);
   expect(ages).toEqual([...ages].sort((a, b) => a - b));
-  await page.getByTestId('th-age').click();
-  await expect(page.getByTestId('th-age')).toHaveAttribute('aria-sort', 'descending');
+  await ageHeader.click();
+  await expect(ageHeader).toHaveAttribute('aria-sort', 'descending');
 });
 
 test('dynamic table: search and page size', async ({ page }) => {
   await page.goto('/pages/tables.html');
-  await page.getByTestId('table-search').fill('editor');
+  const search = page.getByPlaceholder('Search users');
+  await search.fill('editor');
   await expect(page.getByTestId('total-count')).toHaveText('18 users');
-  await page.getByTestId('table-search').fill('zzzz');
-  await expect(page.getByTestId('no-rows')).toBeVisible();
-  await page.getByTestId('table-search').fill('');
-  await page.getByTestId('page-size').selectOption('20');
+  await search.fill('zzzz');
+  await expect(page.getByText('No results')).toBeVisible();
+  await search.fill('');
+  await page.getByLabel('Page size').selectOption('20');
   await expect(page.getByTestId('user-row')).toHaveCount(20);
 });

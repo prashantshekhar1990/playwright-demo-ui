@@ -8,9 +8,9 @@ import { adminAuthFile } from './support/auth-files';
 setup('log in as admin and save the session', async ({ page }) => {
   fs.mkdirSync(path.dirname(adminAuthFile), { recursive: true });
   await page.goto('/login.html');
-  await page.getByTestId('username').fill('admin');
-  await page.getByTestId('password').fill('admin123');
-  await page.getByTestId('login-btn').click();
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Password').fill('admin123');
+  await page.getByRole('button', { name: 'Login' }).click();
   await expect(page).toHaveURL(/\/index\.html$/);
   await page.context().storageState({ path: adminAuthFile });
 });

@@ -15,7 +15,7 @@ const runDir = `./output/${runId}`;
 export default defineConfig({
   testDir: './tests',
   outputDir: `${runDir}/artifacts`,
-  fullyParallel: false, // auth/flaky endpoints hold server state
+  fullyParallel: true, // auth/flaky endpoints hold server state
   workers: 1,
   retries: 0,
   reporter: [

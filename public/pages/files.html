@@ -2,10 +2,10 @@
 <link rel="stylesheet" href="/assets/style.css"></head><body>
 <main><h1 data-testid="page-title">Upload & Download</h1><p class="sub">Single/multiple file upload, download validation</p>
 <section class="card"><h2>Single file upload</h2>
-<input type="file" id="single-file" data-testid="single-file"> <button id="upload-single" data-testid="upload-single">Upload</button>
+<input type="file" id="single-file" aria-label="Single file" data-testid="single-file"> <button id="upload-single" data-testid="upload-single">Upload</button>
 <div class="result" id="single-result" data-testid="single-result">No file uploaded</div></section>
 <section class="card"><h2>Multiple file upload</h2>
-<input type="file" id="multi-file" multiple data-testid="multi-file"> <button id="upload-multi" data-testid="upload-multi">Upload all</button>
+<input type="file" id="multi-file" multiple aria-label="Multiple files" data-testid="multi-file"> <button id="upload-multi" data-testid="upload-multi">Upload all</button>
 <ul id="file-list" data-testid="file-list"></ul>
 <div class="result" id="multi-result" data-testid="multi-result">No files uploaded</div></section>
 <section class="card"><h2>Downloads</h2>

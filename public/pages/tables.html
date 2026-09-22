@@ -9,7 +9,7 @@
 <tr><td>Chair</td><td>Furniture</td><td>120.00</td><td>7</td><td><button class="secondary">Buy</button></td></tr></tbody></table></section>
 <section class="card"><h2>Dynamic table (server-side pagination, sorting, search)</h2>
 <input type="text" id="search" placeholder="Search users" data-testid="table-search">
-<select id="page-size" data-testid="page-size"><option>5</option><option selected>10</option><option>20</option></select>
+<select id="page-size" aria-label="Page size" data-testid="page-size"><option>5</option><option selected>10</option><option>20</option></select>
 <span id="tbl-loading" class="hidden" data-testid="table-loading"><span class="spinner"></span></span>
 <table id="users-table" data-testid="users-table"><thead><tr>
  <th class="sortable" data-sort="id" data-testid="th-id">ID</th><th class="sortable" data-sort="name" data-testid="th-name">Name</th>
