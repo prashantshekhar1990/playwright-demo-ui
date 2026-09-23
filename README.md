@@ -1,9 +1,9 @@
 # Playwright Demo UI
 
-A small practice web application for learning and demonstrating UI test automation with [Playwright](https://playwright.dev). It contains 15 scenario pages (forms, frames, popups, tables, file upload, authentication, network mocking, and more) and a matching Playwright test suite written in TypeScript.
+A small practice web application for learning and demonstrating UI test automation with [Playwright](https://playwright.dev). It contains 17 scenario pages (forms, frames, popups, tables, file upload, authentication, network mocking, a mini e-commerce flow, and more), all behind a login gate, and a matching Playwright test suite written in TypeScript that exercises most of the Playwright Test API — not just the scenario pages. See [Playwright concepts covered](#playwright-concepts-covered) below for the full map.
 
-- **App:** an Express server (`server.js`) that serves static HTML pages from `public/` plus a few small JSON APIs (login, users table, file upload/download, slow and flaky endpoints).
-- **Tests:** Playwright specs in `tests/`, one file per scenario (`01-basic.spec.ts` … `15-complex.spec.ts`).
+- **App:** an Express server (`server.js`) that serves static HTML pages from `public/` plus a set of small JSON APIs (session login, a shop cart/checkout, the users table, file upload/download, HTTP Basic Auth, slow and flaky endpoints).
+- **Tests:** Playwright specs in `tests/`. `01-basic.spec.ts` … `15-complex.spec.ts` are one file per scenario page; `16-runner-and-fixtures.spec.ts`, `17-context-config.spec.ts` and `18-data-driven-api.spec.ts` are cross-cutting — runner/fixture features, browser/context configuration, and API/data-driven testing, each against whichever page or endpoint fits best rather than one dedicated page each.
 
 ## Prerequisites
 
@@ -80,6 +80,7 @@ Supporting pages (not on the home page): `/login.html`, `/pages/dashboard.html` 
 | `admin` | `admin123` | admin |
 | `user` | `user123` | user |
 | `locked` | *(anything)* | always returns 403 "Account locked" |
+| `basicuser` | `basicpass123` | HTTP Basic Auth only (`GET /api/basic-auth/secret`) — separate from the cookie-session logins above |
 
 ## Running the tests
 
@@ -87,20 +88,25 @@ Supporting pages (not on the home page): `/login.html`, `/pages/dashboard.html` 
 npm test
 ```
 
-This runs the full suite with Chromium. Playwright starts the app automatically before the tests (`npm start`), or reuses it if it is already running on port 3000.
+This runs the full suite (101 tests, 2 deliberately skipped as demos — see `test.skip`/`test.fixme` in [16-runner-and-fixtures.spec.ts](tests/16-runner-and-fixtures.spec.ts)) with Chromium. Playwright starts the app automatically before the tests (`npm start`), or reuses it if it is already running on port 3000.
 
 Useful variations:
 
 ```bash
 npm run test:ui                                # interactive Playwright UI mode
+npm run test:ci                                # headless, retries: 2 (playwright.ci.config.ts)
+npm run test:cross-browser                     # Chromium + Firefox + WebKit (playwright.cross-browser.config.ts)
+npm run test:smoke                             # only tests tagged @smoke
+npm run test:codegen                           # opens Playwright's codegen recorder against the running app
 npx playwright test tests/08-tables.spec.ts    # a single spec file
 npx playwright test -g "drag and drop"         # tests whose title matches
 ```
 
 Notes on how the suite is configured (see [playwright.config.ts](playwright.config.ts)):
 
-- Tests run **headed** (a visible browser window) with a single worker, because the auth and flaky-endpoint scenarios rely on server state. To run headless, change `headless: false` to `true` in the config.
+- Tests run **headed** (a visible browser window) with a single worker, because sessions, the shop cart and the flaky-endpoint counter all live in server memory. To run headless, use `npm run test:ci` or change `headless: false` to `true` in the config.
 - To use an already-installed Chromium instead of the Playwright download, set the `CHROMIUM_PATH` environment variable to its executable path.
+- `npm run test:cross-browser` needs Firefox and WebKit installed too: `npx playwright install firefox webkit` (one-time, in addition to the Chromium install in Setup above).
 
 ### Test results and reports
 
@@ -222,11 +228,4 @@ This project deliberately exercises most of the Playwright Test surface, not jus
 | Codegen | `npm run test:codegen` → `npx playwright codegen http://localhost:3000` |
 | Reports | HTML/JSON/JUnit reporters, already configured; `npm run report` opens the latest HTML report |
 
-### New npm scripts
-
-```bash
-npm run test:ci             # headless, retries: 2 (playwright.ci.config.ts)
-npm run test:cross-browser  # Chromium + Firefox + WebKit (playwright.cross-browser.config.ts)
-npm run test:smoke          # only tests tagged @smoke
-npm run test:codegen        # opens Playwright's codegen recorder against the running app
-```
+All of the npm scripts referenced above are listed under [Running the tests](#running-the-tests).
