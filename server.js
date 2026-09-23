@@ -11,6 +11,10 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 app.use(express.json());
+// Browsers request this automatically on every page load; without a route it 404s and (harmlessly
+// but noisily) logs a console error, which tests/fixtures.ts's failOnConsoleError fixture treats as
+// a real failure. Answer it before the login gate so it never triggers a redirect either.
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // ---------- Data ----------
 const users = Array.from({ length: 53 }, (_, i) => ({
@@ -31,6 +35,26 @@ const products = [
   { id: 2, name: 'Phone', price: 599.5 },
   { id: 3, name: 'Headphones', price: 149 },
 ];
+
+// Catalog for the mini e-commerce demo (shop-*.html). Separate from `products` above,
+// which the network-mocking scenario (14-network.spec.ts) depends on unchanged.
+const shopProducts = [
+  { id: 1, name: 'Bananas', category: 'Fruits & Vegetables', price: 40, unit: '1 dozen', stock: 50, emoji: '🍌', description: 'Fresh ripe bananas, sold by the dozen.' },
+  { id: 2, name: 'Tomatoes', category: 'Fruits & Vegetables', price: 30, unit: '1 kg', stock: 40, emoji: '🍅', description: 'Farm-fresh tomatoes, ideal for curries and salads.' },
+  { id: 3, name: 'Potatoes', category: 'Fruits & Vegetables', price: 25, unit: '1 kg', stock: 60, emoji: '🥔', description: 'Everyday potatoes for all your cooking needs.' },
+  { id: 4, name: 'Spinach', category: 'Fruits & Vegetables', price: 20, unit: '250 g', stock: 0, emoji: '🥬', description: 'Leafy green spinach bunch, washed and ready to cook.' },
+  { id: 5, name: 'Milk', category: 'Dairy & Bakery', price: 28, unit: '500 ml', stock: 30, emoji: '🥛', description: 'Pasteurized toned milk, delivered chilled.' },
+  { id: 6, name: 'Bread', category: 'Dairy & Bakery', price: 35, unit: '400 g', stock: 25, emoji: '🍞', description: 'Soft white sandwich bread, baked fresh daily.' },
+  { id: 7, name: 'Paneer', category: 'Dairy & Bakery', price: 80, unit: '200 g', stock: 20, emoji: '🧀', description: 'Fresh cottage cheese block, high in protein.' },
+  { id: 8, name: 'Potato Chips', category: 'Snacks', price: 20, unit: '52 g', stock: 100, emoji: '🍟', description: 'Crunchy salted potato chips.' },
+  { id: 9, name: 'Chocolate Cookies', category: 'Snacks', price: 45, unit: '200 g', stock: 45, emoji: '🍪', description: 'Chocolate-chip cookies, a family favourite.' },
+  { id: 10, name: 'Mixed Namkeen', category: 'Snacks', price: 55, unit: '200 g', stock: 35, emoji: '🥨', description: 'Spiced savoury snack mix.' },
+  { id: 11, name: 'Orange Juice', category: 'Beverages', price: 99, unit: '1 L', stock: 22, emoji: '🧃', description: '100% orange juice, no added sugar.' },
+  { id: 12, name: 'Cola', category: 'Beverages', price: 40, unit: '750 ml', stock: 0, emoji: '🥤', description: 'Chilled cola soft drink.' },
+  { id: 13, name: 'Shampoo', category: 'Personal Care', price: 199, unit: '340 ml', stock: 15, emoji: '🧴', description: 'Gentle daily-use shampoo for all hair types.' },
+  { id: 14, name: 'Toothpaste', category: 'Personal Care', price: 55, unit: '100 g', stock: 40, emoji: '🪥', description: 'Fluoride toothpaste for cavity protection.' },
+];
+const shopCategories = [...new Set(shopProducts.map((p) => p.category))];
 
 // ---------- Sessions (in memory) ----------
 const sessions = new Map();
@@ -125,12 +149,101 @@ app.get('/api/flaky', (req, res) => {
   res.json({ message: 'Success after retries', attempts: flakyCount });
 });
 app.post('/api/flaky/reset', (req, res) => { flakyCount = 0; res.json({ ok: true }); });
-app.post('/api/echo', (req, res) => res.json({ received: req.body, at: new Date().toISOString() }));
+const echoHandler = (req, res) => res.json({ method: req.method, received: req.body, at: new Date().toISOString() });
+app.post('/api/echo', echoHandler);
+app.put('/api/echo', echoHandler); // same handler, only here to demo request.put()
+
+// HTTP Basic Auth demo (independent of the cookie session above), for context.httpCredentials.
+const BASIC_AUTH = { user: 'basicuser', pass: 'basicpass123' };
+app.get('/api/basic-auth/secret', (req, res) => {
+  const header = req.headers.authorization || '';
+  const [scheme, encoded] = header.split(' ');
+  const [user, pass] = scheme === 'Basic' ? Buffer.from(encoded || '', 'base64').toString().split(':') : [];
+  if (user !== BASIC_AUTH.user || pass !== BASIC_AUTH.pass) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="demo"');
+    return res.status(401).json({ error: 'Basic auth required' });
+  }
+  res.json({ secret: 'You authenticated with HTTP Basic Auth', user });
+});
 
 // Virtual list source: GET /api/items?offset=0&limit=50 (10,000 items)
 app.get('/api/items', (req, res) => {
   const offset = +req.query.offset || 0, limit = Math.min(200, +req.query.limit || 50);
   res.json(Array.from({ length: Math.max(0, Math.min(limit, 10000 - offset)) }, (_, i) => ({ id: offset + i + 1, label: `Item ${offset + i + 1}` })));
+});
+
+// ---------- Shop (mini e-commerce demo: catalog, cart, checkout) ----------
+// GET /api/shop/products?q=&category=&page=&size=
+app.get('/api/shop/products', async (req, res) => {
+  const { q = '', category = '' } = req.query;
+  const page = Math.max(1, +req.query.page || 1);
+  const size = Math.min(50, Math.max(1, +req.query.size || 12));
+  const rows = shopProducts.filter((p) =>
+    (!q || p.name.toLowerCase().includes(String(q).toLowerCase())) &&
+    (!category || p.category === category));
+  await sleep(+req.query.delay || 200);
+  res.json({ total: rows.length, page, size, rows: rows.slice((page - 1) * size, page * size), categories: shopCategories });
+});
+app.get('/api/shop/products/:id', (req, res) => {
+  const p = shopProducts.find((x) => x.id === +req.params.id);
+  if (!p) return res.status(404).json({ error: 'Product not found' });
+  res.json(p);
+});
+
+// Cart lives on the logged-in user's session object, so it's already behind the page/API auth gate
+// and is naturally per-user and per-server-restart, like `sessions` itself.
+function cartSummary(u) {
+  u.cart = u.cart || {};
+  const items = Object.entries(u.cart).map(([id, qty]) => {
+    const p = shopProducts.find((x) => x.id === +id);
+    return p ? { id: p.id, name: p.name, price: p.price, unit: p.unit, qty, subtotal: +(p.price * qty).toFixed(2) } : null;
+  }).filter(Boolean);
+  return { items, total: +items.reduce((s, i) => s + i.subtotal, 0).toFixed(2), count: items.reduce((s, i) => s + i.qty, 0) };
+}
+app.get('/api/shop/cart', (req, res) => {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+  res.json(cartSummary(u));
+});
+app.post('/api/shop/cart', (req, res) => {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+  const { productId, qty = 1 } = req.body || {};
+  const p = shopProducts.find((x) => x.id === +productId);
+  if (!p) return res.status(404).json({ error: 'Product not found' });
+  if (p.stock <= 0) return res.status(400).json({ error: 'Out of stock' });
+  u.cart = u.cart || {};
+  u.cart[productId] = Math.min(p.stock, (u.cart[productId] || 0) + (+qty || 1));
+  res.json(cartSummary(u));
+});
+app.patch('/api/shop/cart/:productId', (req, res) => {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+  const { qty } = req.body || {};
+  u.cart = u.cart || {};
+  if (+qty <= 0) delete u.cart[req.params.productId]; else u.cart[req.params.productId] = +qty;
+  res.json(cartSummary(u));
+});
+app.delete('/api/shop/cart/:productId', (req, res) => {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+  u.cart = u.cart || {};
+  delete u.cart[req.params.productId];
+  res.json(cartSummary(u));
+});
+app.post('/api/shop/checkout', async (req, res) => {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+  const { cardNumber, expiry, cvv } = req.body || {};
+  const { items, total } = cartSummary(u);
+  if (!items.length) return res.status(400).json({ error: 'Cart is empty' });
+  if (!/^\d{16}$/.test(String(cardNumber || '').replace(/\s/g, ''))) return res.status(400).json({ error: 'Card number must be 16 digits' });
+  if (!/^\d{2}\/\d{2}$/.test(String(expiry || ''))) return res.status(400).json({ error: 'Expiry must be in MM/YY format' });
+  if (!/^\d{3,4}$/.test(String(cvv || ''))) return res.status(400).json({ error: 'CVV must be 3 or 4 digits' });
+  await sleep(500); // simulate a dummy payment gateway call
+  const orderId = 'ORD' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  u.cart = {};
+  res.json({ orderId, total, items, message: 'Payment successful' });
 });
 
 // ---------- Upload / download ----------

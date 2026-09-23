@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Shop</title>
+<link rel="stylesheet" href="/assets/style.css"><script src="/assets/shop.js"></script></head><body>
+<main><h1 data-testid="page-title">Shop</h1>
+<p class="sub">Search and browse the catalog. <a class="cart-link" href="/pages/shop-cart.html" data-testid="go-to-cart">🛒 Cart (<span data-testid="cart-badge">0</span>)</a></p>
+<section class="card">
+<div class="shop-toolbar">
+ <input type="text" id="search" placeholder="Search products" aria-label="Search products" data-testid="shop-search">
+ <select id="category" aria-label="Category" data-testid="shop-category">
+  <option value="">All categories</option>
+  <option>Fruits &amp; Vegetables</option><option>Dairy &amp; Bakery</option><option>Snacks</option><option>Beverages</option><option>Personal Care</option>
+ </select>
+</div>
+<p id="count" data-testid="shop-results-count"></p>
+<p id="empty" class="hidden" data-testid="shop-no-results">No products found</p>
+<div id="grid" class="product-grid" data-testid="product-grid"></div>
+</section>
+<script>
+const $ = id => document.getElementById(id);
+let t;
+function cardHtml(p) {
+  const addBtn = p.stock > 0
+    ? `<button data-testid="add-to-cart" data-id="${p.id}" aria-label="Add ${p.name} to cart">Add to cart</button>`
+    : `<button disabled aria-label="${p.name} is out of stock">Out of stock</button>`;
+  return `<div class="product-card" data-testid="product-card">
+    <div class="emoji" aria-hidden="true">${p.emoji}</div>
+    <a href="/pages/shop-product.html?id=${p.id}">${p.name}</a>
+    <p class="unit">${p.unit}</p><p class="price">₹${p.price.toFixed(2)}</p>
+    ${addBtn}</div>`;
+}
+async function load() {
+  const qs = new URLSearchParams({ q: $('search').value, category: $('category').value });
+  const r = await fetch('/api/shop/products?' + qs);
+  const j = await r.json();
+  $('count').textContent = `${j.total} product${j.total === 1 ? '' : 's'} found`;
+  $('empty').classList.toggle('hidden', j.rows.length !== 0);
+  $('grid').innerHTML = j.rows.map(cardHtml).join('');
+  $('grid').querySelectorAll('[data-testid=add-to-cart]').forEach(btn => btn.onclick = async () => {
+    btn.disabled = true;
+    try { await shopAddToCart(+btn.dataset.id); const label = btn.getAttribute('aria-label'); btn.textContent = 'Added ✓';
+      setTimeout(() => { btn.textContent = 'Add to cart'; btn.setAttribute('aria-label', label); btn.disabled = false; }, 800); }
+    catch (e) { btn.disabled = false; $('count').textContent = 'Error: ' + e.message; }
+  });
+}
+$('search').oninput = () => { clearTimeout(t); t = setTimeout(load, 300); };
+$('category').onchange = load;
+load(); shopRenderCartBadge();
+</script>
+</main><script src="/assets/nav.js"></script>

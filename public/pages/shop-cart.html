@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Cart</title>
+<link rel="stylesheet" href="/assets/style.css"><script src="/assets/shop.js"></script></head><body>
+<main><h1 data-testid="page-title">Cart</h1>
+<p class="sub"><a href="/pages/shop-catalog.html" data-testid="back-to-catalog">← Continue shopping</a></p>
+
+<section class="card" id="cart-section">
+<h2>Your items</h2>
+<p id="empty-cart" class="hidden" data-testid="cart-empty">Your cart is empty. <a href="/pages/shop-catalog.html">Go pick something out.</a></p>
+<table class="cart-table hidden" id="cart-table" data-testid="cart-table">
+ <thead><tr><th>Product</th><th>Unit</th><th>Price</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
+ <tbody id="items"></tbody>
+</table>
+<p id="total-line" class="hidden"><b>Total: <span id="total" data-testid="cart-total"></span></b></p>
+</section>
+
+<section class="card hidden" id="checkout-section">
+<h2>Payment (dummy)</h2>
+<form id="checkout-form" data-testid="checkout-form">
+ <div><label for="card-name">Name on card</label><input type="text" id="card-name" data-testid="card-name" required></div>
+ <div><label for="card-number">Card number</label><input type="text" id="card-number" placeholder="1234123412341234" data-testid="card-number" required></div>
+ <div><label for="expiry">Expiry (MM/YY)</label><input type="text" id="expiry" placeholder="MM/YY" data-testid="expiry" required></div>
+ <div><label for="cvv">CVV</label><input type="text" id="cvv" placeholder="123" data-testid="cvv" required></div>
+ <div class="result err hidden" id="pay-error" data-testid="pay-error" role="alert"></div>
+ <button type="submit" data-testid="place-order">Place order</button>
+</form>
+</section>
+
+<section class="card hidden order-confirmation" id="confirmation" data-testid="order-confirmation">
+<h2 data-testid="order-success">Order placed!</h2>
+<p class="big" id="order-id" data-testid="order-id"></p>
+<p>Total paid: <span id="order-total" data-testid="order-total"></span></p>
+<a class="btn" href="/pages/shop-catalog.html" data-testid="continue-shopping">Continue shopping</a>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+function rowHtml(i) {
+  return `<tr data-testid="cart-row" data-id="${i.id}">
+    <td>${i.name}</td><td>${i.unit}</td><td>₹${i.price.toFixed(2)}</td>
+    <td><input type="number" min="1" data-testid="cart-qty" value="${i.qty}"></td>
+    <td>₹${i.subtotal.toFixed(2)}</td>
+    <td><button class="danger" data-testid="cart-remove" aria-label="Remove ${i.name} from cart">Remove</button></td></tr>`;
+}
+function wireRowEvents() {
+  $('items').querySelectorAll('[data-testid=cart-qty]').forEach(inp => inp.onchange = async (e) => {
+    const rowId = e.target.closest('tr').dataset.id;
+    await fetch('/api/shop/cart/' + rowId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qty: +e.target.value }) });
+    loadCart(); shopRenderCartBadge();
+  });
+  $('items').querySelectorAll('[data-testid=cart-remove]').forEach(btn => btn.onclick = async (e) => {
+    const rowId = e.target.closest('tr').dataset.id;
+    await fetch('/api/shop/cart/' + rowId, { method: 'DELETE' });
+    loadCart(); shopRenderCartBadge();
+  });
+}
+async function loadCart() {
+  const r = await fetch('/api/shop/cart'); const j = await r.json();
+  const hasItems = j.items.length > 0;
+  $('empty-cart').classList.toggle('hidden', hasItems);
+  $('cart-table').classList.toggle('hidden', !hasItems);
+  $('total-line').classList.toggle('hidden', !hasItems);
+  $('checkout-section').classList.toggle('hidden', !hasItems);
+  $('items').innerHTML = j.items.map(rowHtml).join('');
+  $('total').textContent = '₹' + j.total.toFixed(2);
+  wireRowEvents();
+}
+$('checkout-form').onsubmit = async (e) => {
+  e.preventDefault();
+  $('pay-error').classList.add('hidden');
+  const r = await fetch('/api/shop/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cardNumber: $('card-number').value, expiry: $('expiry').value, cvv: $('cvv').value, name: $('card-name').value }) });
+  const j = await r.json();
+  if (!r.ok) { $('pay-error').textContent = j.error; $('pay-error').classList.remove('hidden'); return; }
+  $('cart-section').classList.add('hidden'); $('checkout-section').classList.add('hidden');
+  $('confirmation').classList.remove('hidden');
+  $('order-id').textContent = 'Order ' + j.orderId;
+  $('order-total').textContent = '₹' + j.total.toFixed(2);
+  shopRenderCartBadge();
+};
+loadCart(); shopRenderCartBadge();
+</script>
+</main><script src="/assets/nav.js"></script>

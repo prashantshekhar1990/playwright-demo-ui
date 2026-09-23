@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Environment Info</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">Environment Info</h1>
+<p class="sub">Reads back whatever the browser context was configured with (viewport, locale, timezone, color scheme, geolocation, user agent, HTTP Basic Auth).</p>
+<section class="card">
+<img alt="Shop logo" data-testid="env-logo" width="40" height="40"
+ src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='18' fill='%234f46e5'/%3E%3Ctext x='20' y='27' font-size='20' text-anchor='middle' fill='white'%3E%F0%9F%9B%92%3C/text%3E%3C/svg%3E">
+<button id="refresh-btn" class="secondary" title="Refresh info" data-testid="env-refresh">🔄</button>
+<button id="rename-btn" class="secondary" data-testid="env-rename">Rename this tab</button>
+<table style="margin-top:12px">
+ <tr><th>Viewport</th><td id="viewport" data-testid="env-viewport"></td></tr>
+ <tr><th>Locale</th><td id="locale" data-testid="env-locale"></td></tr>
+ <tr><th>Timezone</th><td id="timezone" data-testid="env-timezone"></td></tr>
+ <tr><th>Color scheme</th><td id="color-scheme" data-testid="env-color-scheme"></td></tr>
+ <tr><th>User agent</th><td id="user-agent" data-testid="env-user-agent"></td></tr>
+</table>
+</section>
+<section class="card">
+<h2>Geolocation</h2>
+<button id="geo-btn" data-testid="env-geo">Get my location</button>
+<div class="result" id="geo-result" data-testid="env-geo-result">Not requested yet</div>
+</section>
+<section class="card">
+<h2>HTTP Basic Auth (separate from the session cookie above)</h2>
+<button id="basic-auth-btn" data-testid="env-basic-auth">Check /api/basic-auth/secret</button>
+<div class="result" id="basic-auth-result" data-testid="env-basic-auth-result">Not checked yet</div>
+</section>
+<script>
+const $ = id => document.getElementById(id);
+function render() {
+  $('viewport').textContent = `${window.innerWidth} x ${window.innerHeight}`;
+  $('locale').textContent = navigator.language;
+  $('timezone').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  $('color-scheme').textContent = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  $('user-agent').textContent = navigator.userAgent;
+}
+$('refresh-btn').onclick = render;
+$('rename-btn').onclick = () => { document.title = 'Renamed!'; };
+$('geo-btn').onclick = () => {
+  $('geo-result').textContent = 'Locating...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { $('geo-result').textContent = `lat: ${pos.coords.latitude}, lng: ${pos.coords.longitude}`; },
+    (err) => { $('geo-result').textContent = 'Error: ' + err.message; });
+};
+$('basic-auth-btn').onclick = async () => {
+  const r = await fetch('/api/basic-auth/secret');
+  const j = await r.json();
+  $('basic-auth-result').textContent = r.ok ? j.secret : `Unauthorized (${r.status}): ${j.error}`;
+};
+render();
+</script>
+</main><script src="/assets/nav.js"></script>

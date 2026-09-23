@@ -4,6 +4,10 @@ import { adminAuthFile } from './tests/support/auth-files';
 // Set CHROMIUM_PATH to use a pre-installed browser binary (optional).
 const executablePath = process.env.CHROMIUM_PATH;
 
+// Environment management: point the suite at a different running instance without editing this
+// file, e.g. BASE_URL=http://localhost:3001 npx playwright test (see the multi-server discussion).
+const baseURL = process.env.BASE_URL || 'http://localhost:3000';
+
 // One unique ID per run, e.g. 2026-09-21_14-30-05. Stored in an env var so worker
 // processes (which re-load this config) reuse the same value. Override with RUN_ID.
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -15,9 +19,18 @@ const runDir = `./output/${runId}`;
 export default defineConfig({
   testDir: './tests',
   outputDir: `${runDir}/artifacts`,
-  fullyParallel: true, // auth/flaky endpoints hold server state
+  // fullyParallel with a single worker is effectively serial (only one test runs at a time), which
+  // keeps the auth/flaky/cart endpoints' shared server state safe. Raise `workers` only once specs
+  // that mutate shared state (logout, /api/flaky, the cart) are isolated per test/worker.
+  fullyParallel: true,
   workers: 1,
   retries: 0,
+  // Explicit defaults (same values Playwright already uses) so the timeout budget is visible here
+  // rather than implied. Override per test with test.setTimeout()/test.slow(), see 16-*.spec.ts.
+  timeout: 30_000,
+  expect: { timeout: 5_000 },
+  globalSetup: require.resolve('./tests/global-setup'),
+  globalTeardown: require.resolve('./tests/global-teardown'),
   reporter: [
     ['list'],
     ['html', { open: 'never', outputFolder: `${runDir}/html-report` }],
@@ -26,7 +39,7 @@ export default defineConfig({
   ],
   use: {
     headless:false,
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'retain-on-failure',
     acceptDownloads: true,
     launchOptions: executablePath ? { executablePath, args: ['--no-sandbox'] } : {},
@@ -38,5 +51,5 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'], storageState: adminAuthFile }, dependencies: ['setup'] },
   ],
   // Starts the demo app automatically before tests
-  webServer: { command: 'npm start', url: 'http://localhost:3000', reuseExistingServer: true, timeout: 30_000 },
+  webServer: { command: 'npm start', url: baseURL, reuseExistingServer: true, timeout: 30_000 },
 });

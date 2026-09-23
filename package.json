@@ -7,6 +7,10 @@
     "start": "node server.js",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
+    "test:ci": "playwright test --config=playwright.ci.config.ts",
+    "test:cross-browser": "playwright test --config=playwright.cross-browser.config.ts",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:codegen": "playwright codegen http://localhost:3000",
     "report": "node scripts/show-latest-report.js"
   },
   "engines": { "node": ">=18" },

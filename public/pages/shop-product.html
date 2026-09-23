@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Product</title>
+<link rel="stylesheet" href="/assets/style.css"><script src="/assets/shop.js"></script></head><body>
+<main><h1 data-testid="page-title">Product</h1>
+<p class="sub"><a href="/pages/shop-catalog.html" data-testid="back-to-catalog">← Back to catalog</a> · <a class="cart-link" href="/pages/shop-cart.html" data-testid="go-to-cart">🛒 Cart (<span data-testid="cart-badge">0</span>)</a></p>
+<section class="card" id="detail-card">
+<div class="shop-detail" id="detail">
+ <div class="emoji-lg" id="emoji" data-testid="product-emoji" aria-hidden="true"></div>
+ <div class="info">
+  <h2 id="name" data-testid="product-name"></h2>
+  <p class="sub" id="category" data-testid="product-category"></p>
+  <p id="description" data-testid="product-description"></p>
+  <p><b>Price:</b> <span id="price" data-testid="product-price"></span> (<span id="unit" data-testid="product-unit"></span>)</p>
+  <p id="stock-note" data-testid="product-stock"></p>
+  <label for="qty">Quantity</label>
+  <input type="number" id="qty" value="1" min="1" data-testid="product-qty">
+  <button id="add-btn" data-testid="product-add-to-cart">Add to cart</button>
+  <div class="result" id="msg" data-testid="product-message"></div>
+ </div>
+</div>
+<p id="not-found" class="hidden" data-testid="product-not-found">Product not found</p>
+</section>
+<script>
+const $ = id => document.getElementById(id);
+const id = new URLSearchParams(location.search).get('id');
+async function load() {
+  const r = await fetch('/api/shop/products/' + id);
+  if (!r.ok) { $('detail-card').querySelector('#detail').classList.add('hidden'); $('not-found').classList.remove('hidden'); return; }
+  const p = await r.json();
+  document.title = p.name + ' - Shop';
+  $('emoji').textContent = p.emoji; $('name').textContent = p.name; $('category').textContent = p.category;
+  $('description').textContent = p.description; $('price').textContent = '₹' + p.price.toFixed(2); $('unit').textContent = p.unit;
+  if (p.stock > 0) { $('stock-note').textContent = `${p.stock} in stock`; $('qty').max = p.stock; }
+  else { $('stock-note').textContent = 'Out of stock'; $('qty').disabled = true; $('add-btn').disabled = true; $('add-btn').textContent = 'Out of stock'; }
+}
+$('add-btn').onclick = async () => {
+  try { await shopAddToCart(+id, +$('qty').value || 1); $('msg').textContent = 'Added to cart'; $('msg').className = 'result ok'; }
+  catch (e) { $('msg').textContent = e.message; $('msg').className = 'result err'; }
+};
+load(); shopRenderCartBadge();
+</script>
+</main><script src="/assets/nav.js"></script>
