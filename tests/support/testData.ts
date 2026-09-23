@@ -5,7 +5,10 @@ export const credentials = {
   user: { username: 'user', password: 'user123' },
   locked: { username: 'locked', password: 'anything' },
   basicAuth: { username: 'basicuser', password: 'basicpass123' },
+  oauthProvider: { username: 'oauthuser', password: 'oauthpass123' },
 } as const;
+
+export const oauthClient = { id: 'demo-client', secret: 'demo-client-secret' } as const;
 
 export const shopProductIds = {
   bananas: 1,

@@ -68,7 +68,10 @@ const currentUser = (req) => sessions.get(parseCookies(req).sid) || null;
 // ---------- Page gate ----------
 // Deny by default: without a session only the login page, assets, APIs and downloads are reachable.
 // Everything else (index, /pages/*, unknown paths) redirects to /login.html?redirect=<original url>.
-const isOpenPath = (p) => p === '/login.html' || p.startsWith('/assets/') || p.startsWith('/api/') || p.startsWith('/download/');
+// /oauth/* and its two pages are a separate identity system (a mock third-party provider) and
+// must stay reachable regardless of the main app's cookie session — see the OAuth section below.
+const isOpenPath = (p) => p === '/login.html' || p === '/pages/oauth-demo.html' || p === '/pages/oauth-consent.html' ||
+  p.startsWith('/assets/') || p.startsWith('/api/') || p.startsWith('/download/') || p.startsWith('/oauth/');
 // Only same-site absolute paths are valid redirect targets (blocks //host, /\host and login loops).
 const safeRedirect = (r) => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') && !r.includes('\\') && !r.startsWith('/login.html') ? r : '/index.html');
 app.use((req, res, next) => {
@@ -108,6 +111,95 @@ app.get('/api/secure-data', (req, res) => {
   const u = currentUser(req);
   if (!u) return res.status(401).json({ error: 'Not authenticated' });
   res.json({ secret: `Secret data for ${u.username}`, role: u.role });
+});
+
+// ---------- OAuth 2.0 demo (Authorization Code flow) ----------
+// This single server plays all three OAuth roles, purely for demo purposes:
+//   - "client"               the pages under /pages/oauth-demo.html
+//   - "authorization server" /oauth/authorize, /oauth/consent.html's POST target, /oauth/token
+//   - "resource server"      /api/oauth/profile, guarded by a Bearer access token
+// None of this touches the cookie-session login above — it's a deliberately separate identity
+// system, the way a real third-party provider (e.g. "Login with Google") would be.
+const OAUTH_CLIENT = { id: 'demo-client', secret: 'demo-client-secret' };
+const OAUTH_REDIRECT_PATH = '/pages/oauth-demo.html';
+const oauthUsers = { oauthuser: { pw: 'oauthpass123', name: 'OAuth Demo User', email: 'oauthuser@example.com' } };
+const oauthCodes = new Map();         // code -> { redirectUri, scope, username, expiresAt } (one-time use)
+const oauthTokens = new Map();        // accessToken -> { scope, username, expiresAt }
+const oauthRefreshTokens = new Map(); // refreshToken -> { scope, username } (no expiry modeled; rotated on use)
+const genToken = () => crypto.randomBytes(20).toString('hex');
+// Mints a fresh access/refresh token pair for a user. Used by both the authorization_code and
+// refresh_token grants below, so a refresh returns the exact same shape a first login does.
+function issueTokens(username, scope) {
+  const accessToken = genToken();
+  oauthTokens.set(accessToken, { scope, username, expiresAt: Date.now() + 60 * 60 * 1000 });
+  const refreshToken = genToken();
+  oauthRefreshTokens.set(refreshToken, { scope, username });
+  return { access_token: accessToken, refresh_token: refreshToken, token_type: 'Bearer', expires_in: 3600, scope };
+}
+
+// Step 1: the client redirects the browser here to start the flow.
+app.get('/oauth/authorize', (req, res) => {
+  const { client_id, redirect_uri, response_type, state, scope } = req.query;
+  let redirectPath;
+  try { redirectPath = new URL(String(redirect_uri), `http://${req.headers.host}`).pathname; } catch { redirectPath = ''; }
+  if (client_id !== OAUTH_CLIENT.id || response_type !== 'code' || redirectPath !== OAUTH_REDIRECT_PATH) {
+    return res.status(400).json({ error: 'invalid_request' });
+  }
+  const qs = new URLSearchParams({ client_id: String(client_id), redirect_uri: String(redirect_uri), state: String(state || ''), scope: String(scope || 'profile') });
+  res.redirect(`/pages/oauth-consent.html?${qs}`);
+});
+
+// Step 2: the consent screen (its own page) posts the user's decision here as JSON — the same
+// fetch-based pattern login.html uses, rather than a raw HTML form submit. Returns where the
+// browser should go next; the page does the actual redirect client-side.
+app.post('/oauth/consent', (req, res) => {
+  const { username, password, decision, redirect_uri, state, scope } = req.body || {};
+  let redirectUrl;
+  try { redirectUrl = new URL(String(redirect_uri)); } catch { return res.status(400).json({ error: 'invalid_request' }); }
+  if (state) redirectUrl.searchParams.set('state', String(state));
+  if (decision !== 'allow') { redirectUrl.searchParams.set('error', 'access_denied'); return res.json({ redirectUrl: redirectUrl.toString() }); }
+  const u = oauthUsers[username];
+  if (!u || u.pw !== password) return res.status(401).json({ error: 'Invalid username or password for the OAuth demo provider' });
+  const code = genToken();
+  oauthCodes.set(code, { redirectUri: String(redirect_uri), scope: scope || 'profile', username, expiresAt: Date.now() + 2 * 60 * 1000 });
+  redirectUrl.searchParams.set('code', code);
+  res.json({ redirectUrl: redirectUrl.toString() });
+});
+
+// Step 3: the client exchanges the one-time code for an access token (in a real app this call is
+// server-to-server; here the demo page makes it directly for simplicity). Also handles the
+// refresh_token grant, so a caller whose access token has gone bad (expired or revoked) can get a
+// new one without the user going through consent again.
+app.post('/oauth/token', async (req, res) => {
+  const { grant_type, code, redirect_uri, client_id, client_secret, refresh_token } = req.body || {};
+  await sleep(200); // simulate a network hop to a real token endpoint
+  if (client_id !== OAUTH_CLIENT.id || client_secret !== OAUTH_CLIENT.secret) return res.status(401).json({ error: 'invalid_client' });
+
+  if (grant_type === 'authorization_code') {
+    const entry = oauthCodes.get(code);
+    if (!entry || entry.expiresAt < Date.now() || entry.redirectUri !== redirect_uri) return res.status(400).json({ error: 'invalid_grant' });
+    oauthCodes.delete(code); // one-time use: a replayed code fails from here on
+    return res.json(issueTokens(entry.username, entry.scope));
+  }
+  if (grant_type === 'refresh_token') {
+    const entry = oauthRefreshTokens.get(refresh_token);
+    if (!entry) return res.status(400).json({ error: 'invalid_grant' });
+    oauthRefreshTokens.delete(refresh_token); // rotated: this refresh token is now dead too
+    return res.json(issueTokens(entry.username, entry.scope));
+  }
+  res.status(400).json({ error: 'unsupported_grant_type' });
+});
+
+app.post('/oauth/revoke', (req, res) => { oauthTokens.delete((req.body || {}).token); res.json({ ok: true }); });
+
+// Step 4: the resource server. Bearer-token protected, independent of the cookie-session gate.
+app.get('/api/oauth/profile', (req, res) => {
+  const authz = req.headers.authorization || '';
+  const token = authz.startsWith('Bearer ') ? authz.slice(7) : '';
+  const entry = oauthTokens.get(token);
+  if (!entry || entry.expiresAt < Date.now()) return res.status(401).json({ error: 'invalid_token' });
+  const u = oauthUsers[entry.username];
+  res.json({ name: u.name, email: u.email, scope: entry.scope });
 });
 
 // ---------- Tables ----------

@@ -25,6 +25,7 @@ const items = [
  ['complex','Complex apps','Shadow DOM, calendar, autocomplete, virtual list'],
  ['shop-catalog','Mini e-commerce','Catalog, search, cart, dummy checkout'],
  ['env-info','Environment info','Viewport, locale, timezone, geolocation, Basic Auth'],
+ ['oauth-demo','OAuth login','Authorization Code flow: client, authorization server, resource server'],
 ];
 document.getElementById('tiles').innerHTML = items.map(([k,t,d],i)=>
  `<a class="tile" href="/pages/${k}.html" data-testid="tile-${k}"><span class="n">#${i+1}</span> <b>${t}</b><p>${d}</p></a>`).join('');

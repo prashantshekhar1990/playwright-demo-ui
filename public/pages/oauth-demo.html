@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>OAuth Demo</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<main><h1 data-testid="page-title">OAuth Login Demo</h1>
+<p class="sub">A self-contained OAuth 2.0 Authorization Code flow — this app plays client, authorization server and resource server. Separate from the admin/user cookie login above. Demo client: <code>demo-client</code> / <code>demo-client-secret</code>. Provider account: <code>oauthuser</code> / <code>oauthpass123</code>.</p>
+
+<section class="card" id="login-card">
+<h2>Not signed in</h2>
+<button id="login-btn" data-testid="oauth-login">Login with Demo OAuth Provider</button>
+</section>
+
+<div class="result err hidden" id="error-box" data-testid="oauth-error" role="alert"></div>
+
+<section class="card hidden" id="profile-card">
+<h2>Signed in via OAuth</h2>
+<p>Name: <span id="profile-name" data-testid="oauth-profile-name"></span></p>
+<p>Email: <span id="profile-email" data-testid="oauth-profile-email"></span></p>
+<p>Scope: <span id="profile-scope" data-testid="oauth-profile-scope"></span></p>
+<p>Access token: <code id="token-preview" data-testid="oauth-token-preview"></code></p>
+<button id="logout-btn" class="danger" data-testid="oauth-logout">Logout (revoke token)</button>
+</section>
+<div class="result" id="status" data-testid="oauth-status"></div>
+<script>
+const $ = id => document.getElementById(id);
+const CLIENT_ID = 'demo-client';
+const CLIENT_SECRET = 'demo-client-secret'; // demo only — a real app exchanges the code server-side, never client-side
+const REDIRECT_URI = location.origin + '/pages/oauth-demo.html';
+
+function showLoggedOut() { $('login-card').classList.remove('hidden'); $('profile-card').classList.add('hidden'); }
+function showLoggedIn() { $('login-card').classList.add('hidden'); $('profile-card').classList.remove('hidden'); }
+function showError(text) { $('error-box').textContent = text; $('error-box').classList.remove('hidden'); }
+
+async function loadProfile(token) {
+  const r = await fetch('/api/oauth/profile', { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) { sessionStorage.removeItem('oauth_token'); showLoggedOut(); $('status').textContent = 'Session expired or revoked — please log in again.'; return; }
+  const p = await r.json();
+  $('profile-name').textContent = p.name; $('profile-email').textContent = p.email; $('profile-scope').textContent = p.scope;
+  $('token-preview').textContent = token.slice(0, 12) + '...';
+  showLoggedIn();
+}
+
+async function handleCallback(code, state) {
+  const savedState = sessionStorage.getItem('oauth_state');
+  sessionStorage.removeItem('oauth_state');
+  if (!state || state !== savedState) { showError('State mismatch — possible CSRF, login aborted.'); return; }
+  const r = await fetch('/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI, client_id: CLIENT_ID, client_secret: CLIENT_SECRET }) });
+  const j = await r.json();
+  if (!r.ok) { showError('Token exchange failed: ' + j.error); return; }
+  sessionStorage.setItem('oauth_token', j.access_token);
+  await loadProfile(j.access_token);
+}
+
+$('login-btn').onclick = () => {
+  const state = Math.random().toString(36).slice(2);
+  sessionStorage.setItem('oauth_state', state);
+  const qs = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: 'code', state, scope: 'profile' });
+  location.href = '/oauth/authorize?' + qs;
+};
+$('logout-btn').onclick = async () => {
+  const token = sessionStorage.getItem('oauth_token');
+  await fetch('/oauth/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+  sessionStorage.removeItem('oauth_token');
+  showLoggedOut();
+  $('status').textContent = 'Logged out and token revoked.';
+};
+
+(async () => {
+  const params = new URLSearchParams(location.search);
+  if (params.get('error')) { history.replaceState(null, '', location.pathname); showError('Provider denied access: ' + params.get('error')); return; }
+  if (params.get('code')) { const code = params.get('code'), state = params.get('state'); history.replaceState(null, '', location.pathname); await handleCallback(code, state); return; }
+  const existing = sessionStorage.getItem('oauth_token');
+  if (existing) await loadProfile(existing); else showLoggedOut();
+})();
+</script>
+</main><script src="/assets/nav.js"></script>

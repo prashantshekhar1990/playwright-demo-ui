@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Authorize Access</title>
+<link rel="stylesheet" href="/assets/style.css"></head><body>
+<!-- Deliberately no nav.js here: this page plays the role of a separate third-party provider's
+     site, so it shouldn't share this app's own navigation bar. -->
+<main><h1 data-testid="page-title">Demo OAuth Provider</h1>
+<p class="sub"><b id="client-name" data-testid="oauth-client-name"></b> wants to access your profile. Requested scope: <span id="scope-text" data-testid="oauth-scope"></span></p>
+<section class="card">
+<form id="consent-form" data-testid="consent-form">
+ <div><label for="username">Username</label><input type="text" id="username" data-testid="username"></div>
+ <div><label for="password">Password</label><input type="password" id="password" data-testid="password"></div>
+ <div class="result err hidden" id="consent-error" data-testid="consent-error" role="alert"></div>
+ <button type="submit" id="allow-btn" data-testid="consent-allow">Allow</button>
+ <button type="button" id="deny-btn" class="secondary" data-testid="consent-deny">Deny</button>
+</form>
+</section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+$('client-name').textContent = params.get('client_id') || 'An application';
+$('scope-text').textContent = params.get('scope') || 'profile';
+
+async function decide(decision) {
+  $('consent-error').classList.add('hidden');
+  const r = await fetch('/oauth/consent', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: $('username').value, password: $('password').value, decision,
+      redirect_uri: params.get('redirect_uri'), state: params.get('state'), scope: params.get('scope') }) });
+  const j = await r.json();
+  if (!r.ok) { $('consent-error').textContent = j.error; $('consent-error').classList.remove('hidden'); return; }
+  location.href = j.redirectUrl;
+}
+$('consent-form').addEventListener('submit', (e) => { e.preventDefault(); decide('allow'); });
+$('deny-btn').onclick = () => decide('deny');
+</script>
+</body></html>

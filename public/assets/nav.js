@@ -4,7 +4,7 @@
     ['basic', 'Basic'], ['links', 'Links'], ['tabs', 'Tabs'], ['frames', 'Frames'], ['popups', 'Popups'],
     ['dynamic', 'Dynamic'], ['waits', 'Waits'], ['tables', 'Tables'], ['dropdowns', 'Dropdowns'], ['mouse', 'Mouse'],
     ['keyboard', 'Keyboard'], ['files', 'Files'], ['auth', 'Auth'], ['network', 'Network'], ['complex', 'Complex'],
-    ['shop-catalog', 'Shop'], ['env-info', 'Env Info'],
+    ['shop-catalog', 'Shop'], ['env-info', 'Env Info'], ['oauth-demo', 'OAuth'],
   ];
   const header = document.createElement('header');
   header.className = 'topbar';

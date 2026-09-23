@@ -1,9 +1,9 @@
 # Playwright Demo UI
 
-A small practice web application for learning and demonstrating UI test automation with [Playwright](https://playwright.dev). It contains 17 scenario pages (forms, frames, popups, tables, file upload, authentication, network mocking, a mini e-commerce flow, and more), all behind a login gate, and a matching Playwright test suite written in TypeScript that exercises most of the Playwright Test API — not just the scenario pages. See [Playwright concepts covered](#playwright-concepts-covered) below for the full map.
+A small practice web application for learning and demonstrating UI test automation with [Playwright](https://playwright.dev). It contains 18 scenario pages (forms, frames, popups, tables, file upload, authentication, network mocking, a mini e-commerce flow, a full OAuth 2.0 login, and more), all behind a login gate, and a matching Playwright test suite written in TypeScript that exercises most of the Playwright Test API — not just the scenario pages. See [Playwright concepts covered](#playwright-concepts-covered) below for the full map.
 
-- **App:** an Express server (`server.js`) that serves static HTML pages from `public/` plus a set of small JSON APIs (session login, a shop cart/checkout, the users table, file upload/download, HTTP Basic Auth, slow and flaky endpoints).
-- **Tests:** Playwright specs in `tests/`. `01-basic.spec.ts` … `15-complex.spec.ts` are one file per scenario page; `16-runner-and-fixtures.spec.ts`, `17-context-config.spec.ts` and `18-data-driven-api.spec.ts` are cross-cutting — runner/fixture features, browser/context configuration, and API/data-driven testing, each against whichever page or endpoint fits best rather than one dedicated page each.
+- **App:** an Express server (`server.js`) that serves static HTML pages from `public/` plus a set of small JSON APIs (session login, OAuth 2.0, a shop cart/checkout, the users table, file upload/download, HTTP Basic Auth, slow and flaky endpoints).
+- **Tests:** Playwright specs in `tests/`. `01-basic.spec.ts` … `15-complex.spec.ts` are one file per scenario page; `16-runner-and-fixtures.spec.ts`, `17-context-config.spec.ts`, `18-data-driven-api.spec.ts` and `19-oauth.spec.ts` are cross-cutting — runner/fixture features, browser/context configuration, API/data-driven testing, and the OAuth flow — each against whichever page or endpoint fits best rather than one dedicated page each.
 
 ## Prerequisites
 
@@ -68,10 +68,11 @@ The home page (`/`) links to all of these. Test-ids such as `data-testid="tile-b
 | 15 | Complex apps | `/pages/complex.html` | Shadow DOM, calendar, autocomplete, virtual list |
 | 16 | Mini e-commerce | `/pages/shop-catalog.html` | Catalog search/filter, product detail, cart, dummy checkout |
 | 17 | Environment info | `/pages/env-info.html` | Viewport, locale, timezone, color scheme, geolocation, HTTP Basic Auth |
+| 18 | OAuth login | `/pages/oauth-demo.html` | Full OAuth 2.0 Authorization Code flow: client, authorization server, resource server |
 
-**Every page requires login.** The server denies all pages by default and redirects to `/login.html`; only the login page itself, `/assets/*`, `/api/*` and `/download/*` are reachable while logged out. Tests run pre-authenticated (see [Playwright concepts covered](#playwright-concepts-covered) below) — this only matters if you're clicking around by hand.
+**Every page requires login** — with one deliberate exception. The server denies all pages by default and redirects to `/login.html`; only the login page itself, `/assets/*`, `/api/*`, `/download/*` and `/oauth/*` are reachable while logged out. `/pages/oauth-demo.html` and `/pages/oauth-consent.html` are also open, since they're a *separate* identity system (a mock third-party provider) that must work without an existing cookie session — see [server.js](server.js)'s `isOpenPath`. Tests run pre-authenticated (see [Playwright concepts covered](#playwright-concepts-covered) below) — this only matters if you're clicking around by hand.
 
-Supporting pages (not on the home page): `/login.html`, `/pages/dashboard.html` (a login-protected page used by the auth tests), `/pages/tab-level.html`, `/pages/popup-child.html`, `/pages/frame-outer.html` and `/pages/frame-content.html` (targets opened or embedded by the pages above).
+Supporting pages (not on the home page): `/login.html`, `/pages/oauth-consent.html` (the OAuth demo's consent screen — deliberately has no nav bar, since it plays a separate site), `/pages/dashboard.html` (a login-protected page used by the auth tests), `/pages/tab-level.html`, `/pages/popup-child.html`, `/pages/frame-outer.html` and `/pages/frame-content.html` (targets opened or embedded by the pages above).
 
 ### Demo credentials
 
@@ -81,6 +82,9 @@ Supporting pages (not on the home page): `/login.html`, `/pages/dashboard.html` 
 | `user` | `user123` | user |
 | `locked` | *(anything)* | always returns 403 "Account locked" |
 | `basicuser` | `basicpass123` | HTTP Basic Auth only (`GET /api/basic-auth/secret`) — separate from the cookie-session logins above |
+| `oauthuser` | `oauthpass123` | The **OAuth demo provider's** account (used on `/pages/oauth-consent.html`) — a third, independent identity system |
+
+OAuth demo client credentials (public, since this is a practice app): `client_id=demo-client`, `client_secret=demo-client-secret`.
 
 ## Running the tests
 
@@ -88,7 +92,7 @@ Supporting pages (not on the home page): `/login.html`, `/pages/dashboard.html` 
 npm test
 ```
 
-This runs the full suite (101 tests, 2 deliberately skipped as demos — see `test.skip`/`test.fixme` in [16-runner-and-fixtures.spec.ts](tests/16-runner-and-fixtures.spec.ts)) with Chromium. Playwright starts the app automatically before the tests (`npm start`), or reuses it if it is already running on port 3000.
+This runs the full suite (115 tests, 2 deliberately skipped as demos — see `test.skip`/`test.fixme` in [16-runner-and-fixtures.spec.ts](tests/16-runner-and-fixtures.spec.ts)) with Chromium. Playwright starts the app automatically before the tests (`npm start`), or reuses it if it is already running on port 3000.
 
 Useful variations:
 
@@ -130,7 +134,7 @@ Set the `RUN_ID` environment variable to choose the folder name yourself.
 public/                          Static pages (index.html, pages/*.html) and shared assets
 server.js                        Express server and JSON APIs
 tests/                           Playwright specs, one per scenario
-tests/support/                   Shared test data and auth-file paths
+tests/support/                   Shared test data, auth-file paths, and OAuth flow/client helpers
 tests/pages/                     Page objects / component abstractions (LoginPage, CatalogPage, CartPage)
 tests/fixtures.ts                Custom fixtures (test.extend), used by 16-runner-and-fixtures.spec.ts
 tests/global-setup.ts            Runs once before the whole run
@@ -211,6 +215,20 @@ This project deliberately exercises most of the Playwright Test surface, not jus
 |---|---|
 | `request.get/post/put/patch/delete` | All five verbs, including a new `PUT /api/echo` added just to demonstrate `request.put()` |
 | `APIRequestContext` | The `request` fixture, plus a standalone one via `request.newContext()` (imported from `@playwright/test`, no test fixture involved) |
+
+**OAuth 2.0 authentication** — [tests/19-oauth.spec.ts](tests/19-oauth.spec.ts), against `/pages/oauth-demo.html` + `/pages/oauth-consent.html`
+| Topic | Where |
+|---|---|
+| Authorization Code flow, end to end | `login, consent, and the resulting profile` — the full redirect dance through a real browser: client → authorize → consent → callback → token exchange → protected resource |
+| Same flow, pure API (no browser) | `OAuth: pure API (no browser)` describe block — drives `/oauth/consent` and `/oauth/token` directly via `request`, useful for testing the protocol itself without UI overhead |
+| Bearer-token protected resources | `GET /api/oauth/profile`, independent of the cookie-session gate |
+| CSRF protection (`state` parameter) | `a state mismatch aborts the exchange` — a valid code with the wrong `state` is refused client-side |
+| One-time authorization codes | `an authorization code can only be exchanged once` — replaying a code returns `invalid_grant` |
+| Client authentication | `wrong client secret is rejected` — `invalid_client` |
+| Token revocation | `revoking a token invalidates it immediately` — `POST /oauth/revoke` |
+| Consent denial | `denying consent returns an error to the client` — `?error=access_denied`, no token issued |
+| Refresh tokens, rotation | `OAuth: refresh tokens` describe block — `grant_type=refresh_token` mints a new access token; the old refresh token is rotated out and dies on reuse (`invalid_grant`) |
+| Auto-refresh-and-retry client | `an authenticated client auto-refreshes on an invalid token and retries the call` — [tests/support/oauth.ts](tests/support/oauth.ts)'s `createOAuthApiClient()`: on any `401`, refreshes once via the refresh token and retries the same call, the standard "interceptor" pattern real HTTP clients use for OAuth-protected APIs |
 
 **Configuration, projects, execution**
 | Topic | Where |
