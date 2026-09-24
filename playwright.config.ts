@@ -23,7 +23,7 @@ export default defineConfig({
   // keeps the auth/flaky/cart endpoints' shared server state safe. Raise `workers` only once specs
   // that mutate shared state (logout, /api/flaky, the cart) are isolated per test/worker.
   fullyParallel: true,
-  workers: 1,
+  workers: 4,
   retries: 0,
   // Explicit defaults (same values Playwright already uses) so the timeout budget is visible here
   // rather than implied. Override per test with test.setTimeout()/test.slow(), see 16-*.spec.ts.
