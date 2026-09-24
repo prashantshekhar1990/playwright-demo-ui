@@ -3,3 +3,4 @@ output
 test-results
 playwright-report
 tests/.auth
+data

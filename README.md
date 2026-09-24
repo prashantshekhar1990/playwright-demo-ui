@@ -26,12 +26,14 @@ A small practice web application for learning and demonstrating UI test automati
 From the project folder:
 
 ```bash
-# 1. Install project dependencies (Express, multer, Playwright, TypeScript)
+# 1. Install project dependencies (Express, multer, better-sqlite3, Playwright, TypeScript)
 npm install
 
 # 2. Download the browser Playwright drives (one-time)
 npx playwright install chromium
 ```
+
+`better-sqlite3` is a native module; `npm install` fetches a prebuilt binary for common platforms automatically, no extra build step needed. The database file itself (`data/app.db`) is created automatically on first server start — nothing to set up by hand.
 
 ## Starting the server
 
@@ -92,7 +94,7 @@ OAuth demo client credentials (public, since this is a practice app): `client_id
 npm test
 ```
 
-This runs the full suite (115 tests, 2 deliberately skipped as demos — see `test.skip`/`test.fixme` in [16-runner-and-fixtures.spec.ts](tests/16-runner-and-fixtures.spec.ts)) with Chromium. Playwright starts the app automatically before the tests (`npm start`), or reuses it if it is already running on port 3000.
+This runs the full suite (120 tests, 2 deliberately skipped as demos — see `test.skip`/`test.fixme` in [16-runner-and-fixtures.spec.ts](tests/16-runner-and-fixtures.spec.ts)) with Chromium. Playwright starts the app automatically before the tests (`npm start`), or reuses it if it is already running on port 3000.
 
 Useful variations:
 
@@ -133,8 +135,10 @@ Set the `RUN_ID` environment variable to choose the folder name yourself.
 ```
 public/                          Static pages (index.html, pages/*.html) and shared assets
 server.js                        Express server and JSON APIs
+db.js                            SQLite (better-sqlite3) storage for orders — the one piece of real, persistent state
+data/                             Generated: app.db lives here (gitignored, created on first use)
 tests/                           Playwright specs, one per scenario
-tests/support/                   Shared test data, auth-file paths, and OAuth flow/client helpers
+tests/support/                   Shared test data, auth-file paths, OAuth flow/client helpers, and DB access
 tests/pages/                     Page objects / component abstractions (LoginPage, CatalogPage, CartPage)
 tests/fixtures.ts                Custom fixtures (test.extend), used by 16-runner-and-fixtures.spec.ts
 tests/global-setup.ts            Runs once before the whole run
@@ -229,6 +233,15 @@ This project deliberately exercises most of the Playwright Test surface, not jus
 | Consent denial | `denying consent returns an error to the client` — `?error=access_denied`, no token issued |
 | Refresh tokens, rotation | `OAuth: refresh tokens` describe block — `grant_type=refresh_token` mints a new access token; the old refresh token is rotated out and dies on reuse (`invalid_grant`) |
 | Auto-refresh-and-retry client | `an authenticated client auto-refreshes on an invalid token and retries the call` — [tests/support/oauth.ts](tests/support/oauth.ts)'s `createOAuthApiClient()`: on any `401`, refreshes once via the refresh token and retries the same call, the standard "interceptor" pattern real HTTP clients use for OAuth-protected APIs |
+
+**Database testing** — [tests/20-database.spec.ts](tests/20-database.spec.ts), against a real SQLite file (`data/app.db`, via `better-sqlite3`). Deliberately additive: this is the *only* persistent state in the app — sessions, cart, the users/products lists, OAuth tokens all still live in server memory as before, unaffected.
+| Topic | Where |
+|---|---|
+| Direct DB verification (bypassing the API) | `checkout writes a real row, verified by querying SQLite directly` — a test's own connection reads the exact file `server.js` writes to, the "did it really persist, correctly" check that a pure API/UI assertion can't give you |
+| Cross-checking the API against the database | `GET /api/orders/:id matches what is actually stored in the database` |
+| Seeding data directly via SQL | `Database: seeding directly, then verifying through the app` — inserts a row with no API call at all, then checks the app surfaces it |
+| Transaction-per-test isolation | `a row inserted inside a rolled-back transaction never actually persists` — `db.transaction()` + a thrown error to roll back; no cleanup needed because nothing really landed |
+| Real persistence, provable | Confirmed by hand while building this: an order inserted in one Node process is still there when read from a brand-new process afterward — proof this survives what a server restart does to everything else in this app |
 
 **Configuration, projects, execution**
 | Topic | Where |

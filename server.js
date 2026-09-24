@@ -3,6 +3,7 @@
 const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
+const { insertOrder, getOrder, listOrdersForUser } = require('./db');
 const path = require('path');
 
 const app = express();
@@ -64,6 +65,14 @@ const parseCookies = (req) =>
     return [k, decodeURIComponent(v.join('='))];
   }));
 const currentUser = (req) => sessions.get(parseCookies(req).sid) || null;
+// Shared auth check for the API endpoints below that require a logged-in cookie session —
+// replaces the same "const u = currentUser(req); if (!u) return 401" pair that used to be
+// repeated in 9 different handlers. Attaches the session to req.user for the handler to use.
+function requireAuth(req, res, next) {
+  req.user = currentUser(req);
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  next();
+}
 
 // ---------- Page gate ----------
 // Deny by default: without a session only the login page, assets, APIs and downloads are reachable.
@@ -102,14 +111,12 @@ app.post('/api/logout', (req, res) => {
   res.setHeader('Set-Cookie', 'sid=; Path=/; Max-Age=0');
   res.json({ ok: true });
 });
-app.get('/api/me', (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+app.get('/api/me', requireAuth, (req, res) => {
+  const u = req.user;
   res.json({ username: u.username, role: u.role });
 });
-app.get('/api/secure-data', (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+app.get('/api/secure-data', requireAuth, (req, res) => {
+  const u = req.user;
   res.json({ secret: `Secret data for ${u.username}`, role: u.role });
 });
 
@@ -292,14 +299,11 @@ function cartSummary(u) {
   }).filter(Boolean);
   return { items, total: +items.reduce((s, i) => s + i.subtotal, 0).toFixed(2), count: items.reduce((s, i) => s + i.qty, 0) };
 }
-app.get('/api/shop/cart', (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
-  res.json(cartSummary(u));
+app.get('/api/shop/cart', requireAuth, (req, res) => {
+  res.json(cartSummary(req.user));
 });
-app.post('/api/shop/cart', (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+app.post('/api/shop/cart', requireAuth, (req, res) => {
+  const u = req.user;
   const { productId, qty = 1 } = req.body || {};
   const p = shopProducts.find((x) => x.id === +productId);
   if (!p) return res.status(404).json({ error: 'Product not found' });
@@ -308,24 +312,21 @@ app.post('/api/shop/cart', (req, res) => {
   u.cart[productId] = Math.min(p.stock, (u.cart[productId] || 0) + (+qty || 1));
   res.json(cartSummary(u));
 });
-app.patch('/api/shop/cart/:productId', (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+app.patch('/api/shop/cart/:productId', requireAuth, (req, res) => {
+  const u = req.user;
   const { qty } = req.body || {};
   u.cart = u.cart || {};
   if (+qty <= 0) delete u.cart[req.params.productId]; else u.cart[req.params.productId] = +qty;
   res.json(cartSummary(u));
 });
-app.delete('/api/shop/cart/:productId', (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+app.delete('/api/shop/cart/:productId', requireAuth, (req, res) => {
+  const u = req.user;
   u.cart = u.cart || {};
   delete u.cart[req.params.productId];
   res.json(cartSummary(u));
 });
-app.post('/api/shop/checkout', async (req, res) => {
-  const u = currentUser(req);
-  if (!u) return res.status(401).json({ error: 'Not authenticated' });
+app.post('/api/shop/checkout', requireAuth, async (req, res) => {
+  const u = req.user;
   const { cardNumber, expiry, cvv } = req.body || {};
   const { items, total } = cartSummary(u);
   if (!items.length) return res.status(400).json({ error: 'Cart is empty' });
@@ -334,8 +335,19 @@ app.post('/api/shop/checkout', async (req, res) => {
   if (!/^\d{3,4}$/.test(String(cvv || ''))) return res.status(400).json({ error: 'CVV must be 3 or 4 digits' });
   await sleep(500); // simulate a dummy payment gateway call
   const orderId = 'ORD' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  insertOrder({ orderId, username: u.username, items, total }); // the one piece of real, persistent state in this app
   u.cart = {};
   res.json({ orderId, total, items, message: 'Payment successful' });
+});
+
+// Orders placed via checkout above, read back from SQLite (not from server memory).
+app.get('/api/orders', requireAuth, (req, res) => {
+  res.json(listOrdersForUser(req.user.username));
+});
+app.get('/api/orders/:orderId', requireAuth, (req, res) => {
+  const order = getOrder(req.params.orderId);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  res.json(order);
 });
 
 // ---------- Upload / download ----------
