@@ -1,0 +1,31 @@
+name: CI/CD Pipeline
+
+# 1. Define what events trigger the pipeline
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# 2. Define the execution environment and tasks
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest # The virtual machine environment
+
+    steps:
+    # Step 1: Clone your repository code onto the runner
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Step 2: Run a setup tool (Example: Node.js)
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    # Step 3: Execute your custom commands
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test

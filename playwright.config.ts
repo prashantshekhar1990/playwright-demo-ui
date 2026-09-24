@@ -23,7 +23,7 @@ export default defineConfig({
   // keeps the auth/flaky/cart endpoints' shared server state safe. Raise `workers` only once specs
   // that mutate shared state (logout, /api/flaky, the cart) are isolated per test/worker.
   fullyParallel: true,
-  workers: 4,
+  workers: 1,
   retries: 0,
   // Explicit defaults (same values Playwright already uses) so the timeout budget is visible here
   // rather than implied. Override per test with test.setTimeout()/test.slow(), see 16-*.spec.ts.
@@ -38,7 +38,7 @@ export default defineConfig({
     ['junit', { outputFile: `${runDir}/results.xml` }],
   ],
   use: {
-    headless:false,
+    headless: false,
     baseURL,
     trace: 'retain-on-failure',
     acceptDownloads: true,
@@ -48,7 +48,10 @@ export default defineConfig({
     // Logs in once and saves the session to tests/.auth/admin.json
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     // All specs run pre-authenticated; specs that need a logged-out start override storageState.
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], storageState: adminAuthFile }, dependencies: ['setup'] },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], storageState: adminAuthFile }, dependencies: ['setup']
+    },
   ],
   // Starts the demo app automatically before tests
   webServer: { command: 'npm start', url: baseURL, reuseExistingServer: true, timeout: 30_000 },
